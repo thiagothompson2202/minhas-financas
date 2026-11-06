@@ -331,6 +331,8 @@ details.hist .row{grid-template-columns:78px minmax(0,1fr) auto auto;padding:7px
             <label class="f">Categoria<select id="tx-cat"></select></label>
             <label class="f full">Descrição<input type="text" id="tx-desc" placeholder="Ex.: Mercado, Uber, Salário" maxlength="120" required></label>
             <label class="f" id="tx-pag-wrap">Forma de pagamento<select id="tx-pag"></select></label>
+            <label class="f" id="tx-parc-wrap" hidden>Parcelas<select id="tx-parc"></select></label>
+            <p class="full hint" id="tx-parc-hint" style="margin:-4px 0 0" hidden></p>
             <label class="f">Observação<input type="text" id="tx-obs" placeholder="Opcional" maxlength="200"></label>
             <div class="full btns"><button class="btn" type="submit" id="tx-submit">Salvar lançamento</button><button class="btn ghost" type="button" id="tx-cancel" hidden>Cancelar edição</button></div>
           </div>
@@ -651,7 +653,7 @@ const goBtn = (form, label) => `<button class="btn sm" type="button" data-go="${
 function txRow(t, actions = true){
   const isRec = t.tipo === "receita";
   return `<div class="row"><div class="d">${fmtDate(t.data)}</div>
-    <div class="t"><b>${esc(t.descricao)}</b><div class="meta"><span class="chip"><i style="background:${catColor(t.categoria)}"></i>${esc(t.categoria)}</span>${t.pagamento ? `<span>· ${esc(t.pagamento)}</span>` : ""}${t.obs ? `<span>· ${esc(t.obs)}</span>` : ""}</div></div>
+    <div class="t"><b>${esc(t.descricao)}</b><div class="meta"><span class="chip"><i style="background:${catColor(t.categoria)}"></i>${esc(t.categoria)}</span>${t.pagamento ? `<span>· ${esc(t.pagamento)}</span>` : ""}${t.parcelas ? `<span>· parcela ${t.parcela}/${t.parcelas} de ${money(t.valorTotal)}</span>` : ""}${t.dataCompra && t.dataCompra !== t.data ? `<span>· compra em ${fmtDate(t.dataCompra)}</span>` : ""}${t.obs ? `<span>· ${esc(t.obs)}</span>` : ""}</div></div>
     <div class="val ${isRec ? "pos" : ""}">${isRec ? "+" : "−"} ${money(t.valor)}</div>
     ${actions ? `<div class="acts"><button class="icon-btn" type="button" title="Editar" aria-label="Editar" data-edit-tx="${t.id}">${ICON.edit}</button><button class="icon-btn danger" type="button" title="Excluir" aria-label="Excluir" data-del-tx="${t.id}">${ICON.del}</button></div>` : "<div></div>"}</div>`;
 }
@@ -775,6 +777,8 @@ function renderLancar(){
   const extra = curCat && !cats.includes(curCat) ? [curCat] : [];
   fillSelect($("#tx-cat"), [...cats, ...extra].map(c => [c,c]), curCat || cats[0]);
   fillSelect($("#tx-pag"), PAGAMENTOS.map(p => [p,p]), $("#tx-pag").value || "Pix");
+  fillSelect($("#tx-parc"), Array.from({ length: 24 }, (_, i) => [String(i + 1), i ? `${i + 1}x` : "À vista (1x)"]), $("#tx-parc").value || "1");
+  updateParcUI();
   $("#tx-pag-wrap").querySelector("select").disabled = false;
   // investimentos
   $$("[data-flowtipo]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.flowtipo === UI.flowTipo)));
@@ -858,7 +862,37 @@ function openForm(form){ UI.form = form; go("lancar"); render(); }
 /* ================= ações ================= */
 function resetTxForm(){
   $("#tx-valor").value = ""; $("#tx-desc").value = ""; $("#tx-obs").value = "";
-  $("#tx-data").value = todayISO();
+  $("#tx-data").value = todayISO(); $("#tx-parc").value = "1";
+  updateParcUI();
+}
+/* cartão de crédito: compra a partir do dia da virada conta no mês seguinte; parcelas seguem mês a mês */
+const diaVirada = () => Math.min(31, Math.max(1, parseInt(D.cfg.diaVirada, 10) || 21));
+function creditPlan(dataCompra, total, n){
+  const day = +dataCompra.slice(8,10);
+  let ym = dataCompra.slice(0,7);
+  if (day >= diaVirada()) ym = ymAdd(ym, 1);
+  const cents = Math.round(total * 100), base = Math.floor(cents / n), out = [];
+  for (let i = 0; i < n; i++) {
+    const m = ymAdd(ym, i), last = +monthEnd(m).slice(8,10);
+    out.push({ data: m + "-" + String(Math.min(day, last)).padStart(2, "0"), valor: (i === n - 1 ? cents - base * (n - 1) : base) / 100, parcela: i + 1 });
+  }
+  return out;
+}
+const isCreditForm = () => UI.txTipo === "despesa" && $("#tx-pag").value === "Crédito";
+function updateParcUI(){
+  const cred = isCreditForm();
+  $("#tx-parc-wrap").hidden = !cred;
+  const hint = $("#tx-parc-hint");
+  if (!cred) { hint.hidden = true; return; }
+  const n = parseInt($("#tx-parc").value, 10) || 1, total = parseValor($("#tx-valor").value), dc = $("#tx-data").value || todayISO();
+  const plan = creditPlan(dc, total > 0 ? total : 0, n);
+  const first = ymLabel(plan[0].data.slice(0,7)), lastM = ymLabel(plan[n-1].data.slice(0,7));
+  const virou = +dc.slice(8,10) >= diaVirada();
+  let txt = n > 1
+    ? `${total > 0 ? `${n}x de ${money(plan[0].valor)}` : `${n} parcelas`} · 1ª parcela em ${first}, última em ${lastM}.`
+    : `Conta em ${first}.`;
+  if (virou) txt += ` Compra feita a partir do dia ${diaVirada()} entra na fatura do mês seguinte.`;
+  hint.textContent = txt; hint.hidden = false;
 }
 function submitTx(e){
   e.preventDefault();
@@ -866,15 +900,32 @@ function submitTx(e){
   if (!(valor > 0)) { toast("Informe um valor maior que zero."); $("#tx-valor").focus(); return; }
   const desc = $("#tx-desc").value.trim();
   if (!desc) { toast("Escreva uma descrição."); $("#tx-desc").focus(); return; }
-  const rec = { tipo: UI.txTipo, valor, data: $("#tx-data").value || todayISO(), descricao: desc, categoria: $("#tx-cat").value || "Outros", pagamento: $("#tx-pag").value, obs: $("#tx-obs").value.trim() };
-  if (UI.editing && UI.editing.kind === "tx") {
+  const dataCompra = $("#tx-data").value || todayISO();
+  const base = { tipo: UI.txTipo, descricao: desc, categoria: $("#tx-cat").value || "Outros", pagamento: $("#tx-pag").value, obs: $("#tx-obs").value.trim() };
+  const cred = isCreditForm();
+  const n = cred ? (parseInt($("#tx-parc").value, 10) || 1) : 1;
+  const now = Date.now();
+  let criadoEm = now;
+  const editing = UI.editing && UI.editing.kind === "tx";
+  if (editing) {
     const t = D.tx.find(x => x.id === UI.editing.id);
-    if (t) Object.assign(t, rec, { alteradoEm: Date.now() });
-    UI.editing = null; save(); resetTxForm(); toast("Lançamento atualizado"); render(); return;
+    if (t) {
+      criadoEm = t.criadoEm || now;
+      const old = t.grupo ? D.tx.filter(x => x.grupo === t.grupo).map(x => x.id) : [t.id];
+      tombstone(old); D.tx = D.tx.filter(x => !old.includes(x.id));
+    }
+    UI.editing = null;
   }
-  D.tx.push(Object.assign({ id: uid(), criadoEm: Date.now() }, rec));
-  save(); resetTxForm(); toast(UI.txTipo === "receita" ? "Receita salva" : "Despesa salva"); render();
-  $("#tx-valor").focus();
+  if (cred) {
+    const grupo = n > 1 ? uid() : null;
+    creditPlan(dataCompra, valor, n).forEach((p, i) => D.tx.push(Object.assign({ id: uid(), criadoEm: criadoEm + i, alteradoEm: now }, base, { valor: p.valor, data: p.data, dataCompra }, grupo ? { parcela: p.parcela, parcelas: n, grupo, valorTotal: valor } : {})));
+  } else {
+    D.tx.push(Object.assign({ id: uid(), criadoEm, alteradoEm: now }, base, { valor, data: dataCompra }));
+  }
+  save(); resetTxForm();
+  toast(editing ? "Lançamento atualizado" : n > 1 ? `Compra salva em ${n} parcelas` : UI.txTipo === "receita" ? "Receita salva" : "Despesa salva");
+  render();
+  if (!editing) $("#tx-valor").focus();
 }
 function submitFlow(e){
   e.preventDefault();
@@ -930,10 +981,13 @@ function editTx(id){
   const t = D.tx.find(x => x.id === id); if (!t) return;
   UI.editing = { kind: "tx", id }; UI.form = "tx"; UI.txTipo = t.tipo === "receita" ? "receita" : "despesa";
   go("lancar"); render();
-  $("#tx-valor").value = fmtInput(t.valor); $("#tx-data").value = t.data; $("#tx-desc").value = t.descricao; $("#tx-obs").value = t.obs || "";
+  $("#tx-valor").value = fmtInput(t.valorTotal || t.valor); $("#tx-data").value = t.dataCompra || t.data; $("#tx-desc").value = t.descricao; $("#tx-obs").value = t.obs || "";
   const cats = UI.txTipo === "receita" ? D.cfg.catReceita : D.cfg.catDespesa;
   fillSelect($("#tx-cat"), uniq([...cats, t.categoria]).map(c => [c,c]), t.categoria);
   fillSelect($("#tx-pag"), uniq([...PAGAMENTOS, t.pagamento]).map(p => [p,p]), t.pagamento);
+  $("#tx-parc").value = String(t.parcelas || 1);
+  updateParcUI();
+  if (t.grupo) toast(`Editando a compra inteira (${t.parcelas} parcelas)`);
   $("#tx-valor").focus();
 }
 function editMov(id){
@@ -948,25 +1002,35 @@ function editInv(id){
   UI.editing = { kind: "inv", id }; UI.form = "ativo"; go("lancar"); render();
   $("#ativo-nome").value = a.nome; $("#ativo-tipo").value = a.tipo; $("#ativo-inst").value = a.instituicao || "";
 }
-function delTx(id){ const t = D.tx.find(x => x.id === id); if (!t) return; confirmBox("Excluir lançamento?", `${t.descricao} · ${money(t.valor)} em ${fmtDate(t.data)}`, "Excluir", () => { tombstone([id]); D.tx = D.tx.filter(x => x.id !== id); if (UI.editing && UI.editing.id === id) UI.editing = null; save(); toast("Lançamento excluído"); render(); }); }
+function delTx(id){
+  const t = D.tx.find(x => x.id === id); if (!t) return;
+  const ids = t.grupo ? D.tx.filter(x => x.grupo === t.grupo).map(x => x.id) : [id];
+  const title = t.grupo ? "Excluir a compra parcelada?" : "Excluir lançamento?";
+  const text = t.grupo ? `${t.descricao} · ${money(t.valorTotal)} em ${t.parcelas}x. As ${ids.length} parcelas serão apagadas.` : `${t.descricao} · ${money(t.valor)} em ${fmtDate(t.data)}`;
+  confirmBox(title, text, "Excluir", () => { tombstone(ids); D.tx = D.tx.filter(x => !ids.includes(x.id)); if (UI.editing && ids.includes(UI.editing.id)) UI.editing = null; save(); toast(t.grupo ? "Compra parcelada excluída" : "Lançamento excluído"); render(); });
+}
 function delMov(id){ const m = D.mov.find(x => x.id === id); if (!m) return; confirmBox("Excluir movimentação?", `${MOV_LBL[m.tipo]} de ${money(m.valor)} em ${fmtDate(m.data)}`, "Excluir", () => { tombstone([id]); D.mov = D.mov.filter(x => x.id !== id); if (UI.editing && UI.editing.id === id) UI.editing = null; save(); toast("Movimentação excluída"); render(); }); }
 function delInv(id){ const a = D.inv.find(x => x.id === id); if (!a) return; const n = D.mov.filter(m => m.ativoId === id).length; confirmBox(`Excluir ${a.nome}?`, `O investimento e ${n} ${n === 1 ? "movimentação" : "movimentações"} do histórico serão apagados.`, "Excluir investimento", () => { tombstone([id, ...D.mov.filter(m => m.ativoId === id).map(m => m.id)]); D.inv = D.inv.filter(x => x.id !== id); D.mov = D.mov.filter(m => m.ativoId !== id); save(); toast("Investimento excluído"); render(); }); }
 
 /* categorias e limites */
 function openCats(){
-  const draft = { catDespesa: D.cfg.catDespesa.slice(), catReceita: D.cfg.catReceita.slice(), orcamentos: Object.assign({}, D.cfg.orcamentos) };
+  const draft = { catDespesa: D.cfg.catDespesa.slice(), catReceita: D.cfg.catReceita.slice(), orcamentos: Object.assign({}, D.cfg.orcamentos), diaVirada: diaVirada() };
   const draw = () => {
     openModal(`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2>Categorias e limites</h2><button class="icon-btn" type="button" data-close aria-label="Fechar">${ICON.x}</button></div>
       <div class="eyebrow">Despesas · limite mensal</div>
       <div style="display:flex;flex-direction:column;gap:8px">${draft.catDespesa.map((c,i) => `<div class="cat-edit"><span class="name"><i class="dot" style="background:${catColor(c)}"></i>${esc(c)}</span><div class="money-in"><span style="font-size:13px">R$</span><input type="text" inputmode="decimal" id="lim-${i}" data-lim="${esc(c)}" value="${draft.orcamentos[c] ? fmtInput(draft.orcamentos[c]) : ""}" placeholder="Sem limite" style="font-size:14px;padding:8px 8px 8px 36px"></div><button class="icon-btn danger" type="button" data-rm-d="${i}" aria-label="Remover ${esc(c)}">${ICON.x}</button></div>`).join("")}</div>
       <div class="addrow"><input type="text" id="new-cat-d" placeholder="Nova categoria de despesa" maxlength="40"><button class="btn ghost sm" type="button" id="add-cat-d">Adicionar</button></div>
       <hr class="sep">
+      <div class="eyebrow">Cartão de crédito</div>
+      <label class="f" style="flex-direction:row;align-items:center;gap:10px;font-weight:400;color:var(--ink)">Dia em que a fatura vira <input type="number" id="dia-virada" min="1" max="31" value="${draft.diaVirada}" style="width:80px"></label>
+      <p class="hint" style="margin:-6px 0 0">Compras no crédito a partir desse dia contam no mês seguinte.</p>
+      <hr class="sep">
       <div class="eyebrow">Receitas</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">${draft.catReceita.map((c,i) => `<span class="pill" style="background:var(--surface-2);font-family:var(--f-body);font-weight:500;padding:4px 4px 4px 10px">${esc(c)}<button class="icon-btn" type="button" data-rm-r="${i}" aria-label="Remover ${esc(c)}" style="width:24px;height:24px">${ICON.x}</button></span>`).join("")}</div>
       <div class="addrow"><input type="text" id="new-cat-r" placeholder="Nova categoria de receita" maxlength="40"><button class="btn ghost sm" type="button" id="add-cat-r">Adicionar</button></div>
       <div class="btns" style="justify-content:flex-end"><button class="btn ghost" type="button" data-close>Cancelar</button><button class="btn" type="button" id="cats-save">Salvar</button></div>`);
     const box = $("#modal-box");
-    const readLims = () => box.querySelectorAll("[data-lim]").forEach(inp => { const v = parseValor(inp.value); if (v > 0) draft.orcamentos[inp.dataset.lim] = round2(v); else delete draft.orcamentos[inp.dataset.lim]; });
+    const readLims = () => { const dv = parseInt($("#dia-virada").value, 10); if (dv >= 1 && dv <= 31) draft.diaVirada = dv; box.querySelectorAll("[data-lim]").forEach(inp => { const v = parseValor(inp.value); if (v > 0) draft.orcamentos[inp.dataset.lim] = round2(v); else delete draft.orcamentos[inp.dataset.lim]; }); };
     box.querySelectorAll("[data-rm-d]").forEach(b => b.onclick = () => { readLims(); const c = draft.catDespesa[+b.dataset.rmD]; draft.catDespesa.splice(+b.dataset.rmD, 1); delete draft.orcamentos[c]; draw(); });
     box.querySelectorAll("[data-rm-r]").forEach(b => b.onclick = () => { readLims(); draft.catReceita.splice(+b.dataset.rmR, 1); draw(); });
     const add = (key, inputSel) => { readLims(); const v = $(inputSel).value.trim(); if (!v) return; if (!draft[key].some(c => norm(c) === norm(v))) draft[key].push(v); draw(); };
@@ -1016,8 +1080,8 @@ const csvCell = v => { const s = String(v ?? ""); return /[;"\n]/.test(s) ? '"' 
 const csvNum = v => (v || 0).toFixed(2).replace(".", ",");
 function exportTx(){
   if (!D.tx.length) { toast("Não há lançamentos para exportar."); return; }
-  const rows = [["Data","Tipo","Descrição","Categoria","Pagamento","Valor","Observação"]];
-  D.tx.slice().sort((a,b) => a.data < b.data ? -1 : 1).forEach(t => rows.push([fmtDate(t.data), t.tipo === "receita" ? "Receita" : "Despesa", t.descricao, t.categoria, t.pagamento, (t.tipo === "receita" ? "" : "-") + csvNum(t.valor), t.obs || ""]));
+  const rows = [["Data (mês em que conta)","Data da compra","Tipo","Descrição","Categoria","Pagamento","Parcela","Valor","Observação"]];
+  D.tx.slice().sort((a,b) => a.data < b.data ? -1 : 1).forEach(t => rows.push([fmtDate(t.data), fmtDate(t.dataCompra || t.data), t.tipo === "receita" ? "Receita" : "Despesa", t.descricao, t.categoria, t.pagamento, t.parcelas ? `${t.parcela}/${t.parcelas}` : "", (t.tipo === "receita" ? "" : "-") + csvNum(t.valor), t.obs || ""]));
   downloadFile(`gastos-${todayISO()}.csv`, "﻿" + rows.map(r => r.map(csvCell).join(";")).join("\r\n"), "text/csv;charset=utf-8");
 }
 function exportInv(){
@@ -1242,7 +1306,7 @@ document.addEventListener("click", e => {
   if (d.mstep) { UI.month = ymAdd(UI.month, +d.mstep); return render(); }
   if (d.go) return openForm(d.go);
   if (d.form) { if (UI.editing && UI.form !== d.form) UI.editing = null; UI.form = d.form; return render(); }
-  if (d.txtipo) { UI.txTipo = d.txtipo; $("#tx-cat").value = ""; return renderLancar(); }
+  if (d.txtipo) { UI.txTipo = d.txtipo; $("#tx-cat").value = ""; renderLancar(); return updateParcUI(); }
   if (d.flowtipo) { UI.flowTipo = d.flowtipo; return renderLancar(); }
   if (d.editTx) return editTx(d.editTx);
   if (d.delTx) return delTx(d.delTx);
@@ -1272,6 +1336,8 @@ $("#form-flow").addEventListener("submit", submitFlow);
 $("#form-valor").addEventListener("submit", submitValor);
 $("#form-ativo").addEventListener("submit", submitAtivo);
 $("#valor-ativo").addEventListener("change", updateValorHint);
+["#tx-pag","#tx-parc","#tx-data"].forEach(sel => $(sel).addEventListener("change", updateParcUI));
+$("#tx-valor").addEventListener("input", updateParcUI);
 ["#fl-tipo","#fl-cat","#fl-pag"].forEach(s => $(s).addEventListener("change", renderGastos));
 let qT; $("#fl-q").addEventListener("input", () => { clearTimeout(qT); qT = setTimeout(renderGastos, 150); });
 $("#file-restore").addEventListener("change", e => { const f = e.target.files[0]; if (f) restore(f); e.target.value = ""; });
