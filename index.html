@@ -213,7 +213,7 @@ details.hist .row{grid-template-columns:78px minmax(0,1fr) auto auto;padding:7px
 .addrow{display:flex;gap:8px}
 .addrow input{flex:1}
 .top5 .row{grid-template-columns:minmax(0,1fr) auto}
-.import-prev{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+.import-prev{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:8px}
 .import-prev table{width:100%;border-collapse:collapse;font-size:13px}
 .import-prev td,.import-prev th{padding:6px 10px;border-top:1px solid var(--line);text-align:left;white-space:nowrap}
 .import-prev th{position:sticky;top:0;background:var(--surface-2);border-top:0}
@@ -401,11 +401,11 @@ details.hist .row{grid-template-columns:78px minmax(0,1fr) auto auto;padding:7px
             </div>
             <hr class="sep">
             <div>
-              <h2>Importar extrato do banco (CSV)</h2>
-              <p class="hint" style="margin:6px 0 12px">O arquivo precisa ter colunas de data, descrição e valor. Valores negativos viram despesas e positivos viram receitas. Lançamentos repetidos são ignorados.</p>
+              <h2>Importar extrato do banco (PDF ou CSV)</h2>
+              <p class="hint" style="margin:6px 0 12px">Envie o PDF do extrato (Itaú e Banco Inter já são reconhecidos) ou um CSV. Saídas viram despesas e entradas viram receitas. Antes de importar, você confere tudo e escolhe o que entra. Lançamentos repetidos são ignorados. O arquivo é lido só no seu aparelho.</p>
               <div class="form">
-                <label class="f">Arquivo<input type="file" id="file-csv" accept=".csv,text/csv,.txt"></label>
-                <label class="f">Forma de pagamento<select id="imp-pag"></select></label>
+                <label class="f">Arquivo<input type="file" id="file-csv" accept=".pdf,application/pdf,.csv,text/csv,.txt"></label>
+                <label class="f">Forma de pagamento (se o extrato não disser)<select id="imp-pag"></select></label>
               </div>
               <div id="imp-prev" style="margin-top:12px"></div>
             </div>
@@ -1148,24 +1148,189 @@ function parseCSV(text){
   if (!rows.length) return { rows, err: "Não encontrei lançamentos no arquivo. Confira se ele tem colunas de data, descrição e valor." };
   return { rows };
 }
-const txKey = t => `${t.data}|${t.tipo}|${t.valor.toFixed(2)}|${norm(t.descricao)}`;
+const txKey = t => `${t.data}|${t.tipo}|${Number(t.valor).toFixed(2)}|${norm(t.descricao)}`;
+
+/* ---------- classificação dos lançamentos importados ---------- */
+function classify(row){
+  const n = norm(row.descricao + " " + (row.rotulo || ""));
+  if (row.tipo === "receita" && /evento b3|dividend|juros s\/ ?capital|rend pago|rendimento|\bjcp\b/.test(n)) {
+    row.categoria = pick("Rendimentos", D.cfg.catReceita); row.sel = true; return row;
+  }
+  if (/fatura|int itau (mc|click)|pagamento efetuado.*cart|pgto cartao|pag fatura/.test(n)) { row.sel = false; row.motivo = "Pagamento de fatura"; return row; }
+  if (/aplicacao|aplic\b|resgate|\bcdb\b|cofrinho|porquinho|tesouro|venda td|irrf|poupanca|estorno.*cdb/.test(n)) { row.sel = false; row.motivo = "Aplicação ou resgate"; return row; }
+  row.sel = true; return row;
+}
+function guessPag(desc){
+  const n = norm(desc);
+  if (/\bpix\b/.test(n)) return "Pix";
+  if (/boleto/.test(n)) return "Boleto";
+  if (/\bted\b|\bdoc\b|transf/.test(n)) return "Transferência";
+  if (/compra no debito|\bpay\b|debito|cartao/.test(n)) return "Débito";
+  return null;
+}
+function finishRows(rows){
+  return rows.map(r => {
+    r.valor = round2(Math.abs(r.valor));
+    if (!r.categoria) r.categoria = guessCat(r.descricao + " " + (r.rotulo || ""), r.tipo);
+    r.pagamento = r.pagamento || guessPag(r.descricao + " " + (r.rotulo || "")) || null;
+    return classify(r);
+  });
+}
+
+/* ---------- leitura de PDF (PDF.js fica na pasta lib do site) ---------- */
+let pdfjsPromise = null;
+function loadPdfJs(){
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if (pdfjsPromise) return pdfjsPromise;
+  pdfjsPromise = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = "lib/pdf.min.js";
+    s.onload = () => { if (window.pdfjsLib) { pdfjsLib.GlobalWorkerOptions.workerSrc = "lib/pdf.worker.min.js"; resolve(pdfjsLib); } else reject(new Error("load")); };
+    s.onerror = () => { pdfjsPromise = null; reject(new Error("load")); };
+    document.head.appendChild(s);
+  });
+  return pdfjsPromise;
+}
+async function pdfLines(buf, password){
+  const lib = await loadPdfJs();
+  const doc = await lib.getDocument({ data: new Uint8Array(buf), password: password || undefined }).promise;
+  const lines = [];
+  for (let p = 1; p <= doc.numPages; p++) {
+    const page = await doc.getPage(p);
+    const tc = await page.getTextContent();
+    const rows = [];
+    for (const it of tc.items) {
+      if (!it.str || !it.str.trim()) continue;
+      const x = it.transform[4], y = it.transform[5];
+      let r = rows.find(r => Math.abs(r.y - y) < 3);
+      if (!r) { r = { y, items: [] }; rows.push(r); }
+      r.items.push({ x, s: it.str, w: it.width || 0 });
+    }
+    rows.sort((a, b) => b.y - a.y);
+    for (const r of rows) {
+      r.items.sort((a, b) => a.x - b.x);
+      let line = "", end = null;
+      for (const it of r.items) { if (end !== null && it.x - end > 1.5) line += " "; line += it.s; end = it.x + it.w; }
+      lines.push(line.replace(/\s+/g, " ").trim());
+    }
+  }
+  return lines;
+}
+const MESES_N = ["janeiro","fevereiro","marco","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+function parseInter(lines){
+  const rows = []; let cur = null;
+  for (const l of lines) {
+    const h = norm(l).match(/^(\d{1,2}) de ([a-z]+) de (\d{4})/);
+    if (h && MESES_N.includes(h[2])) { cur = `${h[3]}-${String(MESES_N.indexOf(h[2]) + 1).padStart(2, "0")}-${h[1].padStart(2, "0")}`; continue; }
+    if (!cur) continue;
+    const m = l.match(/^(.+?):\s*["“”](.*)["“”]\s+(-?)\s?R\$\s?([\d.]+,\d{2})\s+-?\s?R\$\s?[\d.]+,\d{2}\s*$/);
+    if (!m) continue;
+    const rotulo = m[1].trim(), v = parseValor(m[4]);
+    if (!(v > 0)) continue;
+    const inner = m[2].replace(/^No estabelecimento\s+/i, "").replace(/^Cp\s*:\s*\d+-/i, "").replace(/\s+/g, " ").trim();
+    const nr = norm(rotulo);
+    const descricao = /compra no debito/.test(nr) ? inner : `${rotulo} · ${inner}`;
+    rows.push({ data: cur, descricao, rotulo, valor: v, tipo: m[3] === "-" ? "despesa" : "receita", pagamento: /compra no debito|recarga/.test(nr) ? "Débito" : null });
+  }
+  return rows;
+}
+function parseItau(lines){
+  const rows = [];
+  for (const l of lines) {
+    const m = l.match(/^(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+(-?[\d.]+,\d{2})(?:\s+-?[\d.]+,\d{2})?\s*$/);
+    if (!m) continue;
+    let d = m[2].trim();
+    if (/saldo/i.test(d)) continue;
+    const v = parseValor(m[3]);
+    if (!v) continue;
+    let pagamento = null;
+    if (/^PAY\b/i.test(d)) { pagamento = "Débito"; d = d.replace(/^PAY\s*-?\s*/i, ""); }
+    else if (/^PIX\b/i.test(d)) { pagamento = "Pix"; d = "Pix " + d.replace(/^PIX\s+(TRANSF|QRS|QRD)?\s*/i, ""); }
+    d = d.replace(/\s*\d{2}\/\d{2}$/, "").trim();
+    rows.push({ data: parseDateAny(m[1]), descricao: d || "Sem descrição", valor: v, tipo: v < 0 ? "despesa" : "receita", pagamento });
+  }
+  return rows;
+}
+function parseGenericPdf(lines){
+  const rows = []; const now = new Date();
+  for (const l of lines) {
+    const m = l.match(/^(\d{2}\/\d{2}(?:\/\d{2,4})?)\s+(.+?)\s+(-?\s?(?:R\$\s?)?-?[\d.]+,\d{2})\s*(-|D|C)?\s*$/);
+    if (!m) continue;
+    const desc = m[2].trim();
+    if (/saldo|total|limite|pagamento minimo/.test(norm(desc))) continue;
+    let ds = m[1];
+    if (ds.length === 5) { const mm = +ds.slice(3, 5); const y = mm > now.getMonth() + 1 ? now.getFullYear() - 1 : now.getFullYear(); ds += "/" + y; }
+    let v = parseValor(m[3].replace(/R\$|\s/g, ""));
+    if (m[4] === "-" || m[4] === "D") v = -Math.abs(v);
+    if (!v) continue;
+    rows.push({ data: parseDateAny(ds), descricao: desc, valor: v, tipo: v < 0 ? "despesa" : "receita" });
+  }
+  return rows;
+}
+function parsePdfLines(lines){
+  const all = norm(lines.join("\n"));
+  let banco = "outro", rows;
+  if (/banco inter|saldo do dia: -?r\$/.test(all)) { banco = "Banco Inter"; rows = parseInter(lines); }
+  else if (/itau|extrato conta \/ lancamentos/.test(all)) { banco = "Itaú"; rows = parseItau(lines); }
+  else rows = parseGenericPdf(lines);
+  if (!rows.length && banco !== "outro") rows = parseGenericPdf(lines);
+  if (!rows.length) return { rows, err: "Não encontrei lançamentos neste PDF. Se for de outro banco ou uma fatura, me mande um exemplo para eu ajustar o leitor." };
+  return { rows: finishRows(rows), banco: banco === "outro" ? "PDF" : banco };
+}
+async function importPdfFile(file, password){
+  const box = $("#imp-prev");
+  box.innerHTML = `<p class="hint">Lendo o PDF…</p>`;
+  try {
+    const buf = await file.arrayBuffer();
+    const lines = await pdfLines(buf, password);
+    showImport(parsePdfLines(lines));
+  } catch (e) {
+    if (e && e.name === "PasswordException") {
+      box.innerHTML = `<div class="banner" style="display:flex;flex-direction:column;gap:8px">${password ? "Senha incorreta. Tente de novo." : "Este PDF tem senha (muitos bancos usam parte do CPF)."}<div class="addrow"><input type="password" id="pdf-pass" placeholder="Senha do PDF" autocomplete="off"><button class="btn sm" type="button" id="pdf-pass-ok">Abrir</button></div></div>`;
+      const go = () => importPdfFile(file, $("#pdf-pass").value);
+      $("#pdf-pass-ok").onclick = go; $("#pdf-pass").onkeydown = ev => { if (ev.key === "Enter") { ev.preventDefault(); go(); } };
+      $("#pdf-pass").focus(); return;
+    }
+    box.innerHTML = `<div class="banner">${e && e.message === "load" ? "Não consegui carregar o leitor de PDF. Confira a internet e tente de novo." : "Não consegui ler este PDF. Confira se o arquivo abre normalmente no computador."}</div>`;
+  }
+}
+
+/* ---------- prévia: você escolhe o que entra ---------- */
 function showImport(res){
   const box = $("#imp-prev");
   if (res.err) { box.innerHTML = `<div class="banner">${esc(res.err)}</div>`; UI.importRows = null; return; }
-  const have = new Set(D.tx.map(txKey));
-  const fresh = res.rows.filter(r => !have.has(txKey(r)));
-  const dup = res.rows.length - fresh.length;
+  const have = new Map();
+  for (const t of D.tx) { const k = txKey(t); have.set(k, (have.get(k) || 0) + 1); }
+  let dup = 0;
+  const fresh = [];
+  for (const r of (res.banco ? res.rows : finishRows(res.rows))) {
+    const k = txKey(r);
+    if (have.get(k) > 0) { have.set(k, have.get(k) - 1); dup++; continue; }
+    fresh.push(r);
+  }
   UI.importRows = fresh;
-  const d = fresh.filter(r => r.tipo === "despesa").reduce((a,b) => a + b.valor, 0), rc = fresh.filter(r => r.tipo === "receita").reduce((a,b) => a + b.valor, 0);
-  box.innerHTML = `<p style="margin:0 0 10px"><b>${fresh.length}</b> lançamentos novos${dup ? ` · ${dup} já existiam e serão ignorados` : ""} · <span class="num neg">−${money(d)}</span> <span class="num pos">+${money(rc)}</span></p>
-    ${fresh.length ? `<div class="import-prev"><table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th style="text-align:right">Valor</th></tr></thead><tbody>${fresh.slice(0, 200).map(r => `<tr><td>${fmtDate(r.data)}</td><td>${esc(r.descricao)}</td><td>${esc(r.categoria)}</td><td class="r ${r.tipo === "receita" ? "pos" : ""}">${r.tipo === "receita" ? "+" : "−"} ${money(r.valor)}</td></tr>`).join("")}</tbody></table></div>
-    <p class="hint">As categorias foram sugeridas pela descrição. Depois de importar, você pode corrigir qualquer uma na aba Gastos.</p>
-    <div class="btns" style="margin-top:10px"><button class="btn" type="button" id="imp-go">Importar ${fresh.length} lançamentos</button><button class="btn ghost" type="button" id="imp-cancel">Cancelar</button></div>` : ""}`;
+  UI.importInfo = { dup, banco: res.banco || null };
+  drawImport();
+}
+function drawImport(){
+  const box = $("#imp-prev"), rows = UI.importRows || [], info = UI.importInfo || {};
+  const sel = rows.filter(r => r.sel);
+  const d = sel.filter(r => r.tipo === "despesa").reduce((a, b) => a + b.valor, 0), rc = sel.filter(r => r.tipo === "receita").reduce((a, b) => a + b.valor, 0);
+  const off = rows.length - sel.length;
+  const opts = r => (r.tipo === "receita" ? D.cfg.catReceita : D.cfg.catDespesa).map(c => `<option${c === r.categoria ? " selected" : ""}>${esc(c)}</option>`).join("");
+  box.innerHTML = `<p style="margin:0 0 6px">${info.banco ? `<b>${esc(info.banco)}</b> · ` : ""}<b>${rows.length}</b> lançamentos encontrados${info.dup ? ` · ${info.dup} já existiam e foram ignorados` : ""}</p>
+    ${rows.length ? `<p class="hint" style="margin:0 0 10px">Marcados para importar: <b>${sel.length}</b> · <span class="num neg">−${money(d)}</span> <span class="num pos">+${money(rc)}</span>${off ? ` · ${off} desmarcados (fatura, aplicação ou resgate). Marque os que quiser incluir.` : ""}</p>
+    <div class="import-prev"><table><thead><tr><th><input type="checkbox" id="imp-all" ${off ? "" : "checked"} aria-label="Marcar todos"></th><th>Data</th><th>Descrição</th><th>Categoria</th><th style="text-align:right">Valor</th></tr></thead><tbody>${rows.map((r, i) => `<tr style="${r.sel ? "" : "opacity:.55"}"><td><input type="checkbox" data-imp-sel="${i}" ${r.sel ? "checked" : ""} aria-label="Importar"></td><td>${fmtDate(r.data)}</td><td style="white-space:normal;min-width:180px">${esc(r.descricao)}${r.motivo ? ` <span class="pill" style="background:var(--warn-soft);color:var(--warn);font-family:var(--f-body)">${esc(r.motivo)}</span>` : ""}</td><td><select data-imp-cat="${i}" style="padding:4px 6px;font-size:13px">${opts(r)}</select></td><td class="r ${r.tipo === "receita" ? "pos" : ""}">${r.tipo === "receita" ? "+" : "−"} ${money(r.valor)}</td></tr>`).join("")}</tbody></table></div>
+    <div class="btns" style="margin-top:10px"><button class="btn" type="button" id="imp-go" ${sel.length ? "" : "disabled"}>Importar ${sel.length} lançamentos</button><button class="btn ghost" type="button" id="imp-cancel">Cancelar</button></div>` : ""}`;
+  box.querySelectorAll("[data-imp-sel]").forEach(cb => cb.onchange = () => { rows[+cb.dataset.impSel].sel = cb.checked; drawImport(); });
+  box.querySelectorAll("[data-imp-cat]").forEach(s => s.onchange = () => { rows[+s.dataset.impCat].categoria = s.value; });
+  const all = $("#imp-all"); if (all) all.onchange = () => { rows.forEach(r => r.sel = all.checked); drawImport(); };
   const goB = $("#imp-go"); if (goB) goB.onclick = () => {
     const pag = $("#imp-pag").value, now = Date.now();
-    UI.importRows.forEach((r, i) => D.tx.push(Object.assign({ id: uid(), criadoEm: now + i, pagamento: pag, obs: "Importado" }, r)));
-    const n = UI.importRows.length; UI.importRows = null; save(); box.innerHTML = ""; $("#file-csv").value = "";
-    toast(`${n} lançamentos importados`); render();
+    const chosen = rows.filter(r => r.sel);
+    chosen.forEach((r, i) => D.tx.push({ id: uid(), criadoEm: now + i, alteradoEm: now, tipo: r.tipo, valor: r.valor, data: r.data, descricao: r.descricao, categoria: r.categoria, pagamento: r.pagamento || pag, obs: "Importado" }));
+    UI.importRows = null; save(); box.innerHTML = ""; $("#file-csv").value = "";
+    toast(`${chosen.length} lançamentos importados`); render();
   };
   const c = $("#imp-cancel"); if (c) c.onclick = () => { UI.importRows = null; box.innerHTML = ""; $("#file-csv").value = ""; };
 }
@@ -1341,7 +1506,7 @@ $("#tx-valor").addEventListener("input", updateParcUI);
 ["#fl-tipo","#fl-cat","#fl-pag"].forEach(s => $(s).addEventListener("change", renderGastos));
 let qT; $("#fl-q").addEventListener("input", () => { clearTimeout(qT); qT = setTimeout(renderGastos, 150); });
 $("#file-restore").addEventListener("change", e => { const f = e.target.files[0]; if (f) restore(f); e.target.value = ""; });
-$("#file-csv").addEventListener("change", e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { let txt = r.result; if (txt.includes("�")) { const r2 = new FileReader(); r2.onload = () => showImport(parseCSV(r2.result)); r2.readAsText(f, "windows-1252"); return; } showImport(parseCSV(txt)); }; r.readAsText(f, "utf-8"); });
+$("#file-csv").addEventListener("change", e => { const f = e.target.files[0]; if (!f) return; if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") return importPdfFile(f); const r = new FileReader(); r.onload = () => { let txt = r.result; if (txt.includes("�")) { const r2 = new FileReader(); r2.onload = () => showImport(parseCSV(r2.result)); r2.readAsText(f, "windows-1252"); return; } showImport(parseCSV(txt)); }; r.readAsText(f, "utf-8"); });
 window.addEventListener("storage", e => { if (e.key === STORE_KEY) { load(); render(); } });
 function route(){ const h = location.hash.replace("#", ""); UI.view = ["painel","gastos","investimentos","lancar"].includes(h) ? h : "painel"; render(); }
 window.addEventListener("hashchange", route);
