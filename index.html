@@ -1354,8 +1354,16 @@ function setSync(state, err){
   renderBanner();
   if (UI.view === "lancar" && UI.form === "dados") renderSyncPanel();
 }
+/* o login do Google às vezes não devolve resposta; depois de 90 s (ou num novo clique) a espera é cancelada */
+const AUTH_TIMEOUT_MS = 90000;
+function cancelPendingAuth(msg){ if (SYNC.authCancel) SYNC.authCancel(msg); }
 function requestToken(){
-  return new Promise(async (resolve, reject) => {
+  return new Promise(async (resolveRaw, rejectRaw) => {
+    let done = false, timer = null;
+    const finish = (fn, v) => { if (done) return; done = true; clearTimeout(timer); SYNC.authCancel = null; fn(v); };
+    const resolve = v => finish(resolveRaw, v), reject = e => finish(rejectRaw, e);
+    SYNC.authCancel = msg => reject({ code: "auth", msg: msg || "Login cancelado." });
+    timer = setTimeout(() => reject({ code: "auth", msg: "O Google não respondeu. Toque em \"Conectar de novo\" para tentar outra vez." }), AUTH_TIMEOUT_MS);
     const ok = await window.__gis;
     if (!ok || !(window.google && google.accounts && google.accounts.oauth2)) return reject({ code: "gis", msg: "Não consegui carregar o login do Google. Confira a internet." });
     const client = google.accounts.oauth2.initTokenClient({
@@ -1399,6 +1407,7 @@ async function syncNow(interactive){
   if (SYNC.busy) { SYNC.again = true; return; }
   if (!interactive && !syncWanted()) return;
   SYNC.busy = true;
+  const run = SYNC.run = (SYNC.run || 0) + 1;
   try {
     if (!savedToken()) {
       if (!interactive) throw { code: "auth" };
@@ -1414,10 +1423,12 @@ async function syncNow(interactive){
     lsSet(K_SYNC, "1"); SYNC.last = Date.now(); setSync("ok");
     if (interactive) toast("Sincronizado com o Google Drive");
   } catch (e) {
+    if (run !== SYNC.run) return;
     if (e && e.code === "auth") setSync(syncWanted() ? "login" : "off", e.msg);
     else setSync("error", (e && e.msg) || "Não foi possível sincronizar agora.");
     if (interactive && e && e.msg) toast(e.msg);
   } finally {
+    if (run !== SYNC.run) return;
     SYNC.busy = false;
     if (SYNC.again) { SYNC.again = false; scheduleSync(); }
   }
@@ -1446,6 +1457,11 @@ function connectClick(){
   const inp = $("#gcid");
   if (inp) { const v = inp.value.trim(); if (!/\.apps\.googleusercontent\.com$/.test(v)) { toast("Cole o ID do cliente Google (termina em .apps.googleusercontent.com)."); inp.focus(); return; } lsSet(K_CID, v); }
   if (!clientId()) { UI.form = "dados"; go("lancar"); render(); toast("Primeiro informe o ID do cliente Google."); return; }
+  if (SYNC.authCancel) {
+    /* um login anterior ficou sem resposta: cancela e começa de novo, ainda dentro deste clique */
+    cancelPendingAuth("Tentando de novo…");
+    SYNC.busy = false; SYNC.again = false;
+  }
   syncNow(true);
 }
 
