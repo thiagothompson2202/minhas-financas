@@ -769,16 +769,21 @@ function cumByDay(ym){
 }
 function painelInfo(ym){
   const now = todayISO(), curYm = now.slice(0, 7);
-  const isCur = ym === curYm, day = isCur ? +now.slice(8, 10) : daysIn(ym);
+  const isCur = ym === curYm;
+  const lastData = txOfMonth(ym).filter(x => x.tipo !== "receita").reduce((m, x) => Math.max(m, +x.data.slice(8, 10)), 0);
+  const day = isCur ? Math.min(daysIn(ym), Math.max(+now.slice(8, 10), lastData)) : daysIn(ym);
   const prev = ymAdd(ym, -1);
   const t = monthTotals(ym);
   const cum = cumByDay(ym), cumPrev = cumByDay(prev);
-  const prevSame = isCur ? cumPrev[Math.min(day, cumPrev.length) - 1] : monthTotals(prev).desp;
+  const prevTotal = monthTotals(prev).desp;
+  const prevSame = isCur ? cumPrev[Math.min(day, cumPrev.length) - 1] : prevTotal;
+  const curSame = isCur ? cum[day - 1] : t.desp;
+  const cmpOk = prevSame > 0 && prevSame >= Math.max(100, prevTotal * 0.1);
   const orc = D.cfg.orcamentos || {};
   const budget = D.cfg.catDespesa.reduce((a, c) => a + (orc[c] > 0 ? orc[c] : 0), 0);
   const hist = [1, 2, 3].map(i => monthTotals(ymAdd(ym, -i)).desp).filter(v => v > 0);
   const avg3 = hist.length ? hist.reduce((a, b) => a + b, 0) / hist.length : 0;
-  return { t, isCur, day, prev, cum, cumPrev, prevSame, budget, avg3 };
+  return { t, isCur, day, prev, cum, cumPrev, prevSame, curSame, cmpOk, budget, avg3 };
 }
 function renderAlerts(ym, info){
   const out = [];
@@ -788,8 +793,10 @@ function renderAlerts(ym, info){
   const rest = info.isCur ? daysIn(ym) - info.day : 0;
   const cats = D.cfg.catDespesa.filter(c => orc[c] > 0).map(c => ({ c, p: (spent[c] || 0) / orc[c], s: spent[c] || 0, l: orc[c] })).filter(x => x.p >= 0.8).sort((a, b) => b.p - a.p);
   for (const x of cats.slice(0, 2)) out.push({ bad: x.p > 1, txt: x.p > 1 ? `${esc(x.c)} passou ${money(x.s - x.l)} do limite do mês` : `${esc(x.c)} já usou ${Math.round(x.p * 100)}% do limite do mês${rest > 0 ? ` · faltam ${rest} ${rest === 1 ? "dia" : "dias"}` : ""}` });
-  if (info.isCur && info.day >= 5 && info.prevSame > 0 && info.t.desp > info.prevSame * 1.2)
-    out.push({ bad: false, txt: `Você está gastando ${Math.round((info.t.desp / info.prevSame - 1) * 100)}% mais rápido que em ${mesNome(info.prev)}` });
+  if (info.isCur && info.day >= 5 && info.cmpOk && info.curSame > info.prevSame * 1.2) {
+    const r = info.curSame / info.prevSame;
+    out.push({ bad: false, txt: r >= 2 ? `Até o dia ${info.day} você já gastou ${r.toFixed(1).replace(".", ",")}x o que tinha gastado no mesmo período de ${mesNome(info.prev)}` : `Você está gastando ${Math.round((r - 1) * 100)}% mais rápido que em ${mesNome(info.prev)}` });
+  }
   if (info.isCur && D.tx.length) {
     const last = D.tx.reduce((m, x) => Math.max(m, x.criadoEm || 0), 0);
     const dias = Math.floor((Date.now() - last) / 864e5);
@@ -846,9 +853,10 @@ function renderPainel(){
   renderAlerts(ym, info);
 
   let cmp = "";
-  if (info.prevSame > 0) {
-    const diff = t.desp / info.prevSame - 1, pc = Math.round(Math.abs(diff) * 100);
+  if (info.cmpOk) {
+    const r = info.curSame / info.prevSame, diff = r - 1, pc = Math.round(Math.abs(diff) * 100);
     cmp = pc === 0 ? `<span class="muted">Igual a ${mesNome(info.prev)}${info.isCur ? " até hoje" : ""}</span>`
+      : r >= 2 ? `<span class="neg">↑ ${r.toFixed(1).replace(".", ",")}x o gasto de ${mesNome(info.prev)}${info.isCur ? ` até o dia ${info.day}` : ""}</span>`
       : `<span class="${diff < 0 ? "pos" : "neg"}">${diff < 0 ? "↓" : "↑"} ${pc}% ${diff < 0 ? "a menos" : "a mais"} que ${mesNome(info.prev)}${info.isCur ? ` até o dia ${info.day}` : ""}</span>`;
   }
   let meter = "";
