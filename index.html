@@ -262,6 +262,52 @@ details.hist .row{grid-template-columns:78px minmax(0,1fr) auto auto;padding:8px
 .sync-box{display:flex;flex-direction:column;gap:10px}
 .status-line{display:flex;align-items:center;gap:8px;font-size:14px}
 .status-line i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+/* painel v2 */
+.alerts{display:flex;flex-direction:column;gap:8px}
+.alerts:empty{display:none}
+.alert{display:flex;align-items:center;gap:10px;background:var(--warn-soft);border-radius:var(--r-sm);padding:10px 14px;font-size:13.5px}
+.alert svg{width:18px;height:18px;flex:none;fill:none;stroke:var(--warn);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.alert.bad{background:var(--loss-soft)} .alert.bad svg{stroke:var(--loss)}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:20px}
+.hero-grid > div{min-width:0;display:flex}
+.hero-grid > div > *{flex:1}
+@media (max-width:820px){.hero-grid{grid-template-columns:minmax(0,1fr);gap:14px}}
+.hero .cmp{font-size:13px}
+.meter{height:6px;border-radius:999px;background:var(--surface-2);overflow:hidden;margin-top:12px}
+.meter > span{display:block;height:100%;border-radius:999px;background:var(--accent)}
+.meter.warn > span{background:var(--warn)} .meter.over > span{background:var(--loss)}
+.meter-row{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
+.hero .foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:1px solid var(--line);margin-top:12px;padding-top:10px;font-size:13px}
+.inv2{background:var(--surface);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:4px;border:0;text-align:left;cursor:pointer;color:inherit;min-width:0}
+.inv2:hover{background:var(--surface-2)}
+.inv2 .top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.inv2 .v{font:600 24px/1.2 var(--f-display);letter-spacing:-.01em}
+.inv2 .spark{margin-top:auto;height:52px}
+.pills{display:flex;gap:10px;flex-wrap:wrap}
+.pill-btn{display:inline-flex;align-items:center;gap:7px;border:0;border-radius:999px;padding:9px 16px;background:var(--surface);color:var(--ink);font-weight:500;font-size:14px;cursor:pointer}
+.pill-btn:hover{background:var(--surface-2)}
+.pill-btn .ic{color:var(--accent-text);font-weight:600}
+.pill-btn svg.ic{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.pill-btn.primary{background:var(--accent-strong);color:var(--accent-ink)}
+.pill-btn.primary:hover{background:var(--accent)}
+@media (max-width:560px){.pills{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pill-btn{justify-content:center}}
+.catbars{display:flex;flex-direction:column;gap:12px}
+.catbar .top{display:flex;justify-content:space-between;gap:10px;font-size:13.5px}
+.catbar .top .num{color:var(--muted);font-size:12.5px;white-space:nowrap}
+.catbar .bar{margin-top:6px}
+.catbar .bar > span{background:var(--c1)}
+.catbar.warn .bar > span{background:var(--warn)} .catbar.over .bar > span{background:var(--loss)}
+.catbar .lim{font-size:11.5px;color:var(--muted);margin-top:3px}
+.tx-mini{display:flex;flex-direction:column}
+.tx-mini button{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;border:0;background:none;color:inherit;text-align:left;padding:10px 6px;margin:0 -6px;border-radius:10px;cursor:pointer;font-size:14px}
+.tx-mini button + button{border-top:1px solid var(--line);border-radius:0}
+.tx-mini button:hover{background:var(--surface-2);border-radius:10px}
+.tx-mini .d{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+.tx-mini .t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tx-mini .t small{display:block;color:var(--muted);font-size:12px}
+.tx-mini .val{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.key i.dash{width:14px;height:0;border-top:2px dashed var(--muted);border-radius:0;vertical-align:3px}
+.key i.line{width:14px;height:2px;border-radius:0;vertical-align:3px}
 @media (prefers-reduced-motion:no-preference){ .view{animation:fade .18s ease-out} @keyframes fade{from{opacity:.4}to{opacity:1}} }
 </style>
 </head>
@@ -293,20 +339,23 @@ details.hist .row{grid-template-columns:78px minmax(0,1fr) auto auto;padding:8px
           <div><div class="eyebrow">Olá, Thiago</div><h1>Resumo do mês</h1></div>
           <div class="month" data-month><button type="button" data-mstep="-1" aria-label="Mês anterior">‹</button><span data-mlabel></span><button type="button" data-mstep="1" aria-label="Próximo mês">›</button></div>
         </div>
-        <div id="p-hero"></div>
-        <div class="quick">
-          <button class="qa" type="button" data-quick="despesa"><span class="ic"><svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg></span>Gasto</button>
-          <button class="qa" type="button" data-quick="receita"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></svg></span>Receita</button>
-          <button class="qa" type="button" data-quick="extrato"><span class="ic"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg></span>Extrato</button>
-          <button class="qa" type="button" data-quick="investir"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></span>Investir</button>
+        <div id="p-alerts" class="alerts"></div>
+        <div class="hero-grid">
+          <div id="p-hero"></div>
+          <div id="p-inv"></div>
         </div>
-        <div id="p-inv"></div>
+        <div class="pills">
+          <button class="pill-btn primary" type="button" data-quick="despesa"><span aria-hidden="true">+</span> Gasto</button>
+          <button class="pill-btn" type="button" data-quick="receita"><span class="ic" aria-hidden="true">+</span> Receita</button>
+          <button class="pill-btn" type="button" data-quick="extrato"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg> Extrato</button>
+          <button class="pill-btn" type="button" data-quick="investir"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg> Investimento</button>
+        </div>
+        <div class="panel"><div class="panel-head"><h2>Gasto acumulado no mês</h2><div class="key" id="p-cum-key"></div></div><div id="p-cum"></div></div>
         <div class="grid-2">
-          <div class="panel"><div class="panel-head"><h2>Últimos gastos</h2><button class="link" type="button" data-view-go="gastos">Ver todos</button></div><div id="p-recent" class="recent"></div></div>
-          <div class="panel"><div class="panel-head"><h2>Gastos por categoria</h2></div><div id="p-donut"></div></div>
+          <div class="panel"><div class="panel-head"><h2>Por categoria</h2><button class="link" type="button" id="btn-cats-p">Limites</button></div><div id="p-cats"></div></div>
+          <div class="panel"><div class="panel-head"><h2>Últimos lançamentos</h2><button class="link" type="button" data-view-go="gastos">Ver todos</button></div><div id="p-recent"></div></div>
         </div>
-        <div class="panel"><div class="panel-head"><h2>Receitas e despesas</h2><div class="key"><span><i style="background:var(--gain)"></i>Receitas</span><span><i style="background:var(--loss)"></i>Despesas</span></div></div><div id="p-bars"></div></div>
-        <div class="panel"><div class="panel-head"><h2>Evolução da carteira</h2><span class="muted" style="font-size:12.5px">valor no fim de cada mês</span></div><div id="p-line"></div></div>
+        <div class="panel"><div class="panel-head"><h2>Últimos 6 meses</h2><div class="key"><span><i style="background:var(--gain)"></i>Receitas</span><span><i style="background:var(--loss)"></i>Despesas</span><span><i style="background:var(--ink);height:2px;border-radius:0;vertical-align:3px"></i>Saldo</span></div></div><div id="p-bars"></div></div>
       </section>
 
       <!-- GASTOS -->
@@ -709,41 +758,148 @@ function movRow(m, showAsset){
 /* ================= telas ================= */
 const EYE_ON = '<svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 const EYE_OFF = '<svg viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4M6.6 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7a9.6 9.6 0 0 0 4.4-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
+const ALERT_ICON = '<svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>';
+const daysIn = ym => +monthEnd(ym).slice(8, 10);
+const mesNome = ym => MESL[+ym.slice(5, 7) - 1];
+/* gasto acumulado por dia: array [dia1..diaN] */
+function cumByDay(ym){
+  const n = daysIn(ym), per = new Array(n).fill(0);
+  for (const x of txOfMonth(ym)) if (x.tipo !== "receita") { const d = +x.data.slice(8, 10); if (d >= 1 && d <= n) per[d - 1] += x.valor; }
+  let acc = 0; return per.map(v => (acc += v));
+}
+function painelInfo(ym){
+  const now = todayISO(), curYm = now.slice(0, 7);
+  const isCur = ym === curYm, day = isCur ? +now.slice(8, 10) : daysIn(ym);
+  const prev = ymAdd(ym, -1);
+  const t = monthTotals(ym);
+  const cum = cumByDay(ym), cumPrev = cumByDay(prev);
+  const prevSame = isCur ? cumPrev[Math.min(day, cumPrev.length) - 1] : monthTotals(prev).desp;
+  const orc = D.cfg.orcamentos || {};
+  const budget = D.cfg.catDespesa.reduce((a, c) => a + (orc[c] > 0 ? orc[c] : 0), 0);
+  const hist = [1, 2, 3].map(i => monthTotals(ymAdd(ym, -i)).desp).filter(v => v > 0);
+  const avg3 = hist.length ? hist.reduce((a, b) => a + b, 0) / hist.length : 0;
+  return { t, isCur, day, prev, cum, cumPrev, prevSame, budget, avg3 };
+}
+function renderAlerts(ym, info){
+  const out = [];
+  const spent = {};
+  for (const x of txOfMonth(ym)) if (x.tipo !== "receita") spent[x.categoria] = (spent[x.categoria] || 0) + x.valor;
+  const orc = D.cfg.orcamentos || {};
+  const rest = info.isCur ? daysIn(ym) - info.day : 0;
+  const cats = D.cfg.catDespesa.filter(c => orc[c] > 0).map(c => ({ c, p: (spent[c] || 0) / orc[c], s: spent[c] || 0, l: orc[c] })).filter(x => x.p >= 0.8).sort((a, b) => b.p - a.p);
+  for (const x of cats.slice(0, 2)) out.push({ bad: x.p > 1, txt: x.p > 1 ? `${esc(x.c)} passou ${money(x.s - x.l)} do limite do mês` : `${esc(x.c)} já usou ${Math.round(x.p * 100)}% do limite do mês${rest > 0 ? ` · faltam ${rest} ${rest === 1 ? "dia" : "dias"}` : ""}` });
+  if (info.isCur && info.day >= 5 && info.prevSame > 0 && info.t.desp > info.prevSame * 1.2)
+    out.push({ bad: false, txt: `Você está gastando ${Math.round((info.t.desp / info.prevSame - 1) * 100)}% mais rápido que em ${mesNome(info.prev)}` });
+  if (info.isCur && D.tx.length) {
+    const last = D.tx.reduce((m, x) => Math.max(m, x.criadoEm || 0), 0);
+    const dias = Math.floor((Date.now() - last) / 864e5);
+    if (dias >= 5) out.push({ bad: false, txt: `Você não lança nada há ${dias} dias` });
+  }
+  $("#p-alerts").innerHTML = out.slice(0, 2).map(a => `<div class="alert${a.bad ? " bad" : ""}">${ALERT_ICON}<span>${a.txt}</span></div>`).join("");
+}
+function cumSVG(cur, prev, upTo){
+  const narrow = innerWidth < 560, W = narrow ? 360 : 640, H = narrow ? 190 : 170, pl = narrow ? 50 : 56, pr = 14, pt = 18, pb = 26, iw = W - pl - pr, ih = H - pt - pb;
+  const n = Math.max(cur.length, prev.length);
+  const max = niceMax(Math.max(1, ...cur.slice(0, upTo), ...prev));
+  const x = i => pl + (n === 1 ? 0 : iw * i / (n - 1)), y = v => pt + ih * (1 - v / max);
+  let g = "";
+  for (let i = 0; i <= 2; i++) { const yy = pt + ih * (1 - i / 2); g += `<line x1="${pl}" x2="${W - pr}" y1="${yy}" y2="${yy}" style="stroke:var(--line)"/><text x="${pl - 8}" y="${yy + 4}" text-anchor="end" style="fill:var(--muted)">${compact(max * i / 2)}</text>`; }
+  (narrow ? [1, 15, n] : [1, 10, 20, n]).forEach(dd => { g += `<text x="${x(dd - 1)}" y="${H - 6}" text-anchor="middle" style="fill:var(--muted)">dia ${dd}</text>`; });
+  if (prev.some(v => v > 0)) g += `<polyline points="${prev.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ")}" fill="none" style="stroke:var(--muted)" stroke-width="1.6" stroke-dasharray="5 5" opacity=".8"/>`;
+  const c = cur.slice(0, upTo);
+  if (c.length) {
+    const pts = c.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
+    g += `<path d="M${x(0)},${pt + ih} L${pts.join(" L")} L${x(c.length - 1)},${pt + ih} Z" style="fill:var(--accent);opacity:.10"/>`;
+    g += `<polyline points="${pts.join(" ")}" fill="none" style="stroke:var(--accent-text)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`;
+    const lx = x(c.length - 1), ly = y(c[c.length - 1]);
+    g += `<circle cx="${lx}" cy="${ly}" r="4.5" style="fill:var(--accent-text)"/>`;
+    g += `<text x="${Math.min(Math.max(lx, pl + 40), W - pr - 40)}" y="${Math.max(12, ly - 10)}" text-anchor="middle" style="fill:var(--ink);font-weight:600">${money(c[c.length - 1])}</text>`;
+  }
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Gasto acumulado no mês">${g}</svg>`;
+}
+function monthsSVG(months, data){
+  const narrow = innerWidth < 560, W = narrow ? 360 : 640, H = narrow ? 240 : 230, pl = narrow ? 52 : 64, pr = 10, pt = 16, pb = 28, iw = W - pl - pr, ih = H - pt - pb;
+  const saldos = data.map(d => d.rec - d.desp);
+  const top = niceMax(Math.max(1, ...data.flatMap(d => [d.rec, d.desp]), ...saldos));
+  const minS = Math.min(0, ...saldos);
+  const bot = minS < 0 ? -niceMax(-minS) : 0;
+  const span = top - bot, y = v => pt + ih * (top - v) / span, y0 = y(0);
+  const gw = iw / months.length, bw = Math.min(20, gw * 0.24);
+  let g = "";
+  const ticks = bot < 0 ? [bot, 0, top / 2, top] : [0, top / 4, top / 2, top * 3 / 4, top];
+  for (const v of ticks) { const yy = y(v); g += `<line x1="${pl}" x2="${W - pr}" y1="${yy}" y2="${yy}" style="stroke:var(--line)"${v === 0 ? ' stroke-width="1.5"' : ""}/><text x="${pl - 8}" y="${yy + 4}" text-anchor="end" style="fill:var(--muted)">${compact(v)}</text>`; }
+  const sp = [];
+  months.forEach((ym, i) => {
+    const cx = pl + gw * i + gw / 2, d = data[i], op = ym === UI.month ? 1 : .45;
+    g += `<rect x="${cx - bw - 2}" y="${y(d.rec)}" width="${bw}" height="${Math.max(0, y0 - y(d.rec))}" rx="5" style="fill:var(--gain);opacity:${op}"><title>Receitas ${ymShort(ym)}: ${money(d.rec)}</title></rect>`;
+    g += `<rect x="${cx + 2}" y="${y(d.desp)}" width="${bw}" height="${Math.max(0, y0 - y(d.desp))}" rx="5" style="fill:var(--loss);opacity:${op}"><title>Despesas ${ymShort(ym)}: ${money(d.desp)}</title></rect>`;
+    g += `<text x="${cx}" y="${H - 8}" text-anchor="middle" style="fill:${ym === UI.month ? "var(--ink)" : "var(--muted)"};font-weight:${ym === UI.month ? 600 : 400}">${ymShort(ym)}</text>`;
+    sp.push([cx, y(saldos[i]), saldos[i], ym]);
+  });
+  g += `<polyline points="${sp.map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ")}" fill="none" style="stroke:var(--ink)" stroke-width="1.6" stroke-linejoin="round"/>`;
+  for (const p of sp) g += `<circle cx="${p[0]}" cy="${p[1]}" r="3.2" style="fill:var(--bg);stroke:var(--ink)" stroke-width="1.6"><title>Saldo ${ymShort(p[3])}: ${money(p[2])}</title></circle>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Receitas, despesas e saldo dos últimos 6 meses">${g}</svg>`;
+}
 function renderPainel(){
-  const t = monthTotals(UI.month);
+  const ym = UI.month, info = painelInfo(ym), t = info.t;
   const priv = document.body.classList.contains("privado");
+  renderAlerts(ym, info);
+
+  let cmp = "";
+  if (info.prevSame > 0) {
+    const diff = t.desp / info.prevSame - 1, pc = Math.round(Math.abs(diff) * 100);
+    cmp = pc === 0 ? `<span class="muted">Igual a ${mesNome(info.prev)}${info.isCur ? " até hoje" : ""}</span>`
+      : `<span class="${diff < 0 ? "pos" : "neg"}">${diff < 0 ? "↓" : "↑"} ${pc}% ${diff < 0 ? "a menos" : "a mais"} que ${mesNome(info.prev)}${info.isCur ? ` até o dia ${info.day}` : ""}</span>`;
+  }
+  let meter = "";
+  if (info.budget > 0) {
+    const orcM = D.cfg.orcamentos || {};
+    const spentB = txOfMonth(ym).filter(x => x.tipo !== "receita" && orcM[x.categoria] > 0).reduce((a, x) => a + x.valor, 0);
+    const p = spentB / info.budget, st = p > 1 ? "over" : p >= 0.8 ? "warn" : "";
+    meter = `<div class="meter ${st}"><span style="width:${Math.min(100, p * 100).toFixed(1)}%"></span></div><div class="meter-row" data-sens><span>${Math.round(p * 100)}% dos limites (${money(spentB)} de ${money(info.budget)})</span><span>${p <= 1 ? `Ainda pode gastar ${money(info.budget - spentB)}` : `Passou ${money(spentB - info.budget)}`}</span></div>`;
+  } else if (info.avg3 > 0) {
+    const p = t.desp / info.avg3, st = p > 1 ? "over" : p >= 0.8 ? "warn" : "";
+    meter = `<div class="meter ${st}"><span style="width:${Math.min(100, p * 100).toFixed(1)}%"></span></div><div class="meter-row" data-sens><span>${Math.round(p * 100)}% da sua média de gastos</span><span>Média dos últimos meses: ${money(info.avg3)}</span></div>`;
+  }
   $("#p-hero").innerHTML = `<div class="hero">
-      <div class="hero-top"><span class="lbl">Saldo de ${MESL[+UI.month.slice(5,7)-1]}</span><button class="eye" type="button" data-eye aria-label="${priv ? "Mostrar valores" : "Esconder valores"}" title="${priv ? "Mostrar valores" : "Esconder valores"}">${priv ? EYE_OFF : EYE_ON}</button></div>
-      <div class="big ${t.saldo < -0.004 ? "neg" : ""}" data-sens>${money(t.saldo)}</div>
-      <div class="flows" data-sens><span class="pos">↑ ${money(t.rec)}</span><span class="neg">↓ ${money(t.desp)}</span></div>
-      ${t.rec ? `<div class="note">${t.saldo >= 0 ? `Sobrou ${Math.round(t.saldo / t.rec * 100)}% do que entrou` : `Saiu ${money(-t.saldo)} a mais do que entrou`}</div>` : ""}
+      <div class="hero-top"><span class="lbl">Gasto em ${mesNome(ym)}</span><button class="eye" type="button" data-eye aria-label="${priv ? "Mostrar valores" : "Esconder valores"}" title="${priv ? "Mostrar valores" : "Esconder valores"}">${priv ? EYE_OFF : EYE_ON}</button></div>
+      <div class="big" data-sens>${money(t.desp)}</div>
+      ${cmp ? `<div class="cmp">${cmp}</div>` : ""}
+      ${meter}
+      <div class="foot"><span class="muted">Saldo do mês <b class="${cls(t.saldo)}" data-sens>${signed(t.saldo)}</b></span><span data-sens><span class="pos">Entrou ${money(t.rec)}</span> · <span class="neg">Saiu ${money(t.desp)}</span></span></div>
     </div>`;
 
   const pf = portfolio();
-  $("#p-inv").innerHTML = D.inv.length
-    ? `<button class="inv-card" type="button" data-view-go="investimentos"><div><div class="eyebrow">Investimentos</div><div class="v" data-sens>${money(pf.atual)}</div><div class="hint" data-sens>Aplicado ${money(pf.liquido)} · ${pf.resultado >= 0 ? "ganho" : "perda"} de ${money(Math.abs(pf.resultado))}</div></div><span class="pill ${cls(pf.resultado)}">${pctTxt(pf.pct)}</span></button>`
-    : `<div class="inv-card" style="cursor:default"><div><div class="eyebrow">Investimentos</div><div class="hint">Cadastre seus investimentos para ver se está ganhando ou perdendo.</div></div><button class="btn sm" type="button" data-go="ativo">Cadastrar</button></div>`;
+  if (D.inv.length) {
+    const nowYm = todayISO().slice(0, 7), vals = [];
+    for (let i = 11; i >= 0; i--) { const m = ymAdd(nowYm, -i); vals.push(portfolio(i === 0 ? todayISO() : monthEnd(m)).atual); }
+    const firstIdx = vals.findIndex(v => v > 0);
+    $("#p-inv").innerHTML = `<button class="inv2" type="button" data-view-go="investimentos"><div class="top"><span>Investimentos</span><span class="pill ${cls(pf.resultado)}">${pctTxt(pf.pct)}</span></div><div class="v" data-sens>${money(pf.atual)}</div><div class="hint" data-sens>Aplicado ${money(pf.liquido)} · ${pf.resultado >= 0 ? "ganho" : "perda"} de ${money(Math.abs(pf.resultado))}</div>${sparkSVG(vals.slice(Math.max(0, firstIdx)), pf.resultado >= 0)}</button>`;
+  } else {
+    $("#p-inv").innerHTML = `<div class="inv2" style="cursor:default"><div class="top"><span>Investimentos</span></div><div class="hint">Cadastre seus investimentos para ver se está ganhando ou perdendo.</div><div style="margin-top:auto"><button class="btn sm" type="button" data-go="ativo">Cadastrar investimento</button></div></div>`;
+  }
 
-  const desp = txOfMonth(UI.month).filter(x => x.tipo !== "receita");
-  const recent = desp.slice().sort((a,b) => a.data < b.data ? 1 : a.data > b.data ? -1 : (b.criadoEm||0) - (a.criadoEm||0)).slice(0, 5);
-  $("#p-recent").innerHTML = recent.length ? `<div class="rows">${recent.map(x => `<div class="row"><div class="ico"><i style="background:${catColor(x.categoria)}"></i></div><div class="t"><b>${esc(x.descricao)}</b><div class="meta"><span>${esc(x.categoria)}</span><span>· ${fmtDate(x.data).slice(0,5)}</span></div></div><div class="val" data-sens>−${money(x.valor)}</div></div>`).join("")}</div>` : empty("Nenhum gasto neste mês", "Toque em Gasto para lançar o primeiro.");
+  const upTo = info.isCur ? info.day : info.cum.length;
+  $("#p-cum-key").innerHTML = `<span><i class="line" style="background:var(--accent-text)"></i>${mesNome(ym)}</span>${info.cumPrev.some(v => v > 0) ? `<span><i class="dash"></i>${mesNome(info.prev)}</span>` : ""}`;
+  $("#p-cum").innerHTML = (t.desp > 0 || info.cumPrev.some(v => v > 0)) ? `<div style="overflow-x:auto">${cumSVG(info.cum, info.cumPrev, upTo)}</div>` : empty("Sem gastos neste mês", "O gráfico mostra como o gasto vai se acumulando ao longo do mês.");
 
-  const byCat = {};
-  for (const x of desp) byCat[x.categoria] = (byCat[x.categoria] || 0) + x.valor;
-  let items = Object.entries(byCat).map(([label, value]) => ({ label, value, color: catColor(label) })).sort((a,b) => b.value - a.value);
-  if (items.length > 6) { const rest = items.slice(5).reduce((a,b) => a + b.value, 0); items = items.slice(0,5).concat({ label: "Demais", value: rest, color: "var(--c9)" }); }
-  $("#p-donut").innerHTML = items.length ? `<div class="donut-wrap">${donutSVG(items, "gastos", compact(t.desp))}${legendHTML(items)}</div>` : empty("Sem gastos neste mês", "Os gastos por categoria aparecem aqui.");
+  const spent = {};
+  for (const x of txOfMonth(ym)) if (x.tipo !== "receita") spent[x.categoria] = (spent[x.categoria] || 0) + x.valor;
+  const orc = D.cfg.orcamentos || {};
+  const cats = Object.entries(spent).sort((a, b) => b[1] - a[1]);
+  const maxV = cats.length ? cats[0][1] : 1;
+  $("#p-cats").innerHTML = cats.length ? `<div class="catbars">${cats.slice(0, 7).map(([c, v]) => {
+    const lim = orc[c] > 0 ? orc[c] : 0, p = lim ? v / lim : 0, st = lim ? (p > 1 ? "over" : p >= 0.8 ? "warn" : "") : "";
+    const w = lim ? Math.min(100, p * 100) : v / maxV * 100;
+    return `<div class="catbar ${st}"><div class="top"><span>${esc(c)}</span><span class="num" data-sens>${money(v)} · ${Math.round(v / t.desp * 100)}%</span></div><div class="bar"><span style="width:${w.toFixed(1)}%"></span></div>${lim ? `<div class="lim" data-sens>${Math.round(p * 100)}% do limite de ${money(lim)}</div>` : ""}</div>`;
+  }).join("")}</div>` : empty("Sem gastos neste mês", "Os gastos por categoria aparecem aqui.");
 
-  const months = []; for (let i = 5; i >= 0; i--) months.push(ymAdd(UI.month, -i));
+  const recent = txOfMonth(ym).slice().sort((a, b) => a.data < b.data ? 1 : a.data > b.data ? -1 : (b.criadoEm || 0) - (a.criadoEm || 0)).slice(0, 6);
+  $("#p-recent").innerHTML = recent.length ? `<div class="tx-mini">${recent.map(x => `<button type="button" data-edit-tx="${x.id}" title="Editar"><span class="d">${fmtDate(x.data).slice(0, 5)}</span><span class="t">${esc(x.descricao)}<small>${esc(x.categoria)}</small></span><span class="val ${x.tipo === "receita" ? "pos" : ""}" data-sens>${x.tipo === "receita" ? "+" : "−"}${money(x.valor)}</span></button>`).join("")}</div>` : empty("Nenhum lançamento neste mês", "Toque em Gasto ou Receita para lançar.");
+
+  const months = []; for (let i = 5; i >= 0; i--) months.push(ymAdd(ym, -i));
   const data = months.map(monthTotals);
-  $("#p-bars").innerHTML = data.some(d => d.rec || d.desp) ? `<div style="overflow-x:auto">${barsSVG(months, data)}</div>` : empty("Sem lançamentos nos últimos 6 meses", "O comparativo de receitas e despesas aparece conforme você lança.");
-
-  const firsts = D.mov.map(m => m.data).sort();
-  if (!firsts.length) { $("#p-line").innerHTML = empty("Sem histórico de investimentos", "Cadastre um investimento e atualize o valor dele de tempos em tempos.", goBtn("ativo","Cadastrar investimento")); return; }
-  const nowYm = todayISO().slice(0,7);
-  let start = ymOf(firsts[0]); const min = ymAdd(nowYm, -11); if (start < min) start = min;
-  const pts = []; for (let ym = start; ym <= nowYm; ym = ymAdd(ym, 1)) pts.push({ label: ymShort(ym), value: portfolio(ym === nowYm ? todayISO() : monthEnd(ym)).atual });
-  $("#p-line").innerHTML = `<div style="overflow-x:auto">${lineSVG(pts)}</div>`;
+  $("#p-bars").innerHTML = data.some(d => d.rec || d.desp) ? `<div style="overflow-x:auto">${monthsSVG(months, data)}</div>` : empty("Sem lançamentos nos últimos 6 meses", "O comparativo de receitas e despesas aparece conforme você lança.");
 }
 
 function renderGastos(){
@@ -1554,7 +1710,7 @@ document.addEventListener("click", e => {
   if (d.flow) { UI.editing = null; UI.form = "flow"; go("lancar"); render(); $("#flow-ativo").value = d.flow; $("#flow-valor").focus(); return; }
   if (d.close !== undefined) return closeModal();
   if (d.openCats !== undefined) return openCats();
-  if (el.id === "btn-cats") return openCats();
+  if (el.id === "btn-cats" || el.id === "btn-cats-p") return openCats();
   if (el.id === "btn-new-asset") { UI.editing = null; return openForm("ativo"); }
   if (el.id === "btn-backup" || el.id === "banner-backup") return backup();
   if (el.id === "btn-exp-tx") return exportTx();
@@ -1581,6 +1737,7 @@ $("#file-csv").addEventListener("change", e => { const f = e.target.files[0]; if
 window.addEventListener("storage", e => { if (e.key === STORE_KEY) { load(); render(); } });
 function route(){ const h = location.hash.replace("#", ""); UI.view = ["painel","gastos","investimentos","lancar"].includes(h) ? h : "painel"; render(); }
 window.addEventListener("hashchange", route);
+let rzT, rzW = innerWidth < 560; window.addEventListener("resize", () => { clearTimeout(rzT); rzT = setTimeout(() => { const nw = innerWidth < 560; if (nw !== rzW) { rzW = nw; render(); } }, 200); });
 
 /* ================= início ================= */
 load();
