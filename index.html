@@ -310,6 +310,34 @@ details.hist .row{grid-template-columns:78px minmax(0,1fr) auto auto;padding:8px
 .tx-mini .val{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
 .key i.dash{width:14px;height:0;border-top:2px dashed var(--muted);border-radius:0;vertical-align:3px}
 .key i.line{width:14px;height:2px;border-radius:0;vertical-align:3px}
+/* painel v3: blocos */
+.blocks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.blk{position:relative;background:var(--surface);border:0;border-radius:18px;padding:16px;color:inherit;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:4px;min-width:0;transition:background .15s}
+.blk:hover{background:var(--surface-2)}
+.blk.wide{grid-column:span 2}
+.blk .lbl{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
+.blk .lbl svg{width:15px;height:15px;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.blk .go{position:absolute;top:14px;right:14px;width:16px;height:16px;fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:.6}
+.blk:hover .go{opacity:1}
+.blk .v{font:600 22px/1.2 var(--f-display);letter-spacing:-.01em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.blk .s{font-size:12px;color:var(--muted)}
+.blk .meter{margin-top:8px}
+.blk .spark{height:28px;margin-top:6px}
+.folga{flex-direction:row;align-items:center;gap:16px}
+.folga svg.gauge{width:120px;flex:none}
+.folga .txt{display:flex;flex-direction:column;gap:3px;min-width:0}
+.folga .big2{font-size:15px}
+.folga .big2 b{font-weight:600}
+.stack{display:flex;height:12px;border-radius:999px;overflow:hidden;gap:2px;margin-top:8px;background:var(--surface-2)}
+.stack span{display:block;height:100%}
+.legend2{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.legend2 button{display:inline-flex;align-items:center;gap:6px;border:0;background:var(--surface-2);border-radius:999px;padding:5px 10px;font-size:12.5px;color:var(--ink);cursor:pointer}
+.legend2 button:hover{background:var(--surface-3)}
+.legend2 i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.legend2 small{color:var(--muted);font-size:11.5px}
+.flash{animation:flash 1.2s ease-out}
+@keyframes flash{0%{box-shadow:0 0 0 2px var(--accent)}100%{box-shadow:0 0 0 0 transparent}}
+@media (max-width:820px){.blocks{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.blk{padding:14px}.blk .v{font-size:19px}.folga svg.gauge{width:96px}}
 @media (prefers-reduced-motion:no-preference){ .view{animation:fade .18s ease-out} @keyframes fade{from{opacity:.4}to{opacity:1}} }
 </style>
 </head>
@@ -338,26 +366,20 @@ details.hist .row{grid-template-columns:78px minmax(0,1fr) auto auto;padding:8px
       <!-- PAINEL -->
       <section class="view" id="v-painel" hidden>
         <div class="head">
-          <div><div class="eyebrow">Olá, Thiago</div><h1>Resumo do mês</h1></div>
-          <div class="month" data-month><button type="button" data-mstep="-1" aria-label="Mês anterior">‹</button><span data-mlabel></span><button type="button" data-mstep="1" aria-label="Próximo mês">›</button></div>
+          <div><div class="eyebrow">Olá, Thiago</div><h1>Meu mês</h1></div>
+          <div style="display:flex;gap:8px;align-items:center"><button class="eye" type="button" data-eye id="p-eye" aria-label="Esconder valores" title="Esconder valores"></button><div class="month" data-month><button type="button" data-mstep="-1" aria-label="Mês anterior">‹</button><span data-mlabel></span><button type="button" data-mstep="1" aria-label="Próximo mês">›</button></div></div>
         </div>
         <div id="p-alerts" class="alerts"></div>
-        <div class="hero-grid">
-          <div id="p-hero"></div>
-          <div id="p-inv"></div>
-        </div>
+        <div class="blocks" id="p-blocks"></div>
         <div class="pills">
           <button class="pill-btn primary" type="button" data-quick="despesa"><span aria-hidden="true">+</span> Gasto</button>
           <button class="pill-btn" type="button" data-quick="receita"><span class="ic" aria-hidden="true">+</span> Receita</button>
           <button class="pill-btn" type="button" data-quick="extrato"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg> Extrato</button>
           <button class="pill-btn" type="button" data-quick="investir"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg> Investimento</button>
         </div>
-        <div class="panel"><div class="panel-head"><h2>Gasto acumulado no mês</h2><div class="key" id="p-cum-key"></div></div><div id="p-cum"></div></div>
-        <div class="grid-2">
-          <div class="panel"><div class="panel-head"><h2>Por categoria</h2><button class="link" type="button" id="btn-cats-p">Limites</button></div><div id="p-cats"></div></div>
-          <div class="panel"><div class="panel-head"><h2>Últimos lançamentos</h2><button class="link" type="button" data-view-go="gastos">Ver todos</button></div><div id="p-recent"></div></div>
-        </div>
-        <div class="panel"><div class="panel-head"><h2>Últimos 6 meses</h2><div class="key"><span><i style="background:var(--gain)"></i>Receitas</span><span><i style="background:var(--loss)"></i>Despesas</span><span><i style="background:var(--ink);height:2px;border-radius:0;vertical-align:3px"></i>Saldo</span></div></div><div id="p-bars"></div></div>
+        <div class="panel" id="p-cum-panel"><div class="panel-head"><h2>Gasto dia a dia</h2><div class="key" id="p-cum-key"></div></div><div id="p-cum"></div></div>
+        <div class="panel"><div class="panel-head"><h2>Últimos lançamentos</h2><button class="link" type="button" data-view-go="gastos">Ver todos</button></div><div id="p-recent"></div></div>
+        <div class="panel"><div class="panel-head"><h2>Últimos 6 meses</h2><div class="key"><span><i style="background:var(--gain)"></i>Receitas</span><span><i style="background:var(--loss)"></i>Despesas</span><span><i class="line" style="background:var(--ink)"></i>Saldo</span></div></div><div id="p-bars"></div></div>
       </section>
 
       <!-- GASTOS -->
@@ -851,64 +873,101 @@ function monthsSVG(months, data){
   for (const p of sp) g += `<circle cx="${p[0]}" cy="${p[1]}" r="3.2" style="fill:var(--bg);stroke:var(--ink)" stroke-width="1.6"><title>Saldo ${ymShort(p[3])}: ${money(p[2])}</title></circle>`;
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Receitas, despesas e saldo dos últimos 6 meses">${g}</svg>`;
 }
+const GO_ICON = '<svg class="go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+function gaugeSVG(frac, label){
+  const f = Math.max(0, Math.min(1, frac)), r = 40, cx = 50, cy = 50;
+  const a = Math.PI * (1 - f), x = cx + r * Math.cos(a), y = cy - r * Math.sin(a);
+  const col = f <= 0.1 ? "var(--loss)" : f <= 0.25 ? "var(--warn)" : "var(--accent-text)";
+  const arc = f > 0.001 ? `<path d="M${cx - r} ${cy} A${r} ${r} 0 0 1 ${x.toFixed(2)} ${y.toFixed(2)}" fill="none" style="stroke:${col}" stroke-width="10" stroke-linecap="round"/>` : "";
+  return `<svg class="gauge" viewBox="0 0 100 60" aria-hidden="true"><path d="M${cx - r} ${cy} A${r} ${r} 0 0 1 ${cx + r} ${cy}" fill="none" style="stroke:var(--surface-2)" stroke-width="10" stroke-linecap="round"/>${arc}<text x="50" y="52" text-anchor="middle" style="fill:var(--ink);font-size:17px;font-weight:600">${esc(label)}</text></svg>`;
+}
+function dailySpend(ym, upTo){
+  const per = new Array(daysIn(ym)).fill(0);
+  for (const x of txOfMonth(ym)) if (x.tipo !== "receita") { const d = +x.data.slice(8, 10); if (d >= 1 && d <= per.length) per[d - 1] += x.valor; }
+  return per.slice(0, upTo);
+}
+function drill(kind, extra){
+  const reset = () => { $("#fl-tipo").value = ""; $("#fl-pag").value = ""; $("#fl-q").value = ""; fillSelect($("#fl-cat"), [["","Todas"], ...uniq([...D.cfg.catDespesa, ...D.cfg.catReceita, ...D.tx.map(x => x.categoria)]).map(c => [c,c])], ""); };
+  if (kind === "limites") return openCats();
+  if (kind === "saidas" || kind === "entradas" || kind === "cat") {
+    reset();
+    $("#fl-tipo").value = kind === "entradas" ? "receita" : "despesa";
+    if (kind === "cat") $("#fl-cat").value = extra;
+    go("gastos");
+    setTimeout(() => { const p = $("#g-list"); if (p) { p.closest(".panel").scrollIntoView({ behavior: "smooth", block: "start" }); } }, 80);
+    return;
+  }
+  if (kind === "dia") { const p = $("#p-cum-panel"); p.scrollIntoView({ behavior: "smooth", block: "center" }); p.classList.remove("flash"); void p.offsetWidth; p.classList.add("flash"); return; }
+  if (kind === "invest") return go("investimentos");
+}
 function renderPainel(){
   const ym = UI.month, info = painelInfo(ym), t = info.t;
-  const priv = document.body.classList.contains("privado");
+  const priv = isPriv();
+  const eye = $("#p-eye"); eye.innerHTML = priv ? EYE_OFF : EYE_ON; eye.setAttribute("aria-label", priv ? "Mostrar valores" : "Esconder valores"); eye.title = eye.getAttribute("aria-label");
   renderAlerts(ym, info);
 
+  /* comparação com o mês anterior */
   let cmp = "";
   if (info.cmpOk) {
     const r = info.curSame / info.prevSame, diff = r - 1, pc = Math.round(Math.abs(diff) * 100);
-    cmp = pc === 0 ? `<span class="muted">Igual a ${mesNome(info.prev)}${info.isCur ? " até hoje" : ""}</span>`
-      : isPriv() ? `<span class="muted">Comparação com ${mesNome(info.prev)} oculta</span>`
-      : r >= 2 ? `<span class="neg">↑ ${r.toFixed(1).replace(".", ",")}x o gasto de ${mesNome(info.prev)}${info.isCur ? ` até o dia ${info.day}` : ""}</span>`
-      : `<span class="${diff < 0 ? "pos" : "neg"}">${diff < 0 ? "↓" : "↑"} ${pc}% ${diff < 0 ? "a menos" : "a mais"} que ${mesNome(info.prev)}${info.isCur ? ` até o dia ${info.day}` : ""}</span>`;
+    cmp = pc === 0 ? `<span class="muted">Igual a ${mesNome(info.prev)}</span>`
+      : priv ? `<span class="muted">Comparação com ${mesNome(info.prev)} oculta</span>`
+      : r >= 2 ? `<span class="neg">${r.toFixed(1).replace(".", ",")}x o gasto de ${mesNome(info.prev)}${info.isCur ? ` até o dia ${info.day}` : ""}</span>`
+      : `<span class="${diff < 0 ? "pos" : "neg"}">${pc}% ${diff < 0 ? "abaixo" : "acima"} de ${mesNome(info.prev)}${info.isCur ? ` até o dia ${info.day}` : ""}</span>`;
   }
-  let meter = "";
-  if (info.budget > 0) {
-    const orcM = D.cfg.orcamentos || {};
-    const spentB = txOfMonth(ym).filter(x => x.tipo !== "receita" && orcM[x.categoria] > 0).reduce((a, x) => a + x.valor, 0);
-    const p = spentB / info.budget, st = p > 1 ? "over" : p >= 0.8 ? "warn" : "";
-    meter = `<div class="meter ${st}"><span style="width:${Math.min(100, p * 100).toFixed(1)}%"></span></div><div class="meter-row" data-sens><span>${Math.round(p * 100)}% dos limites (${money(spentB)} de ${money(info.budget)})</span><span>${p <= 1 ? `Ainda pode gastar ${money(info.budget - spentB)}` : `Passou ${money(spentB - info.budget)}`}</span></div>`;
-  } else if (info.avg3 > 0) {
-    const p = t.desp / info.avg3, st = p > 1 ? "over" : p >= 0.8 ? "warn" : "";
-    meter = `<div class="meter ${st}"><span style="width:${Math.min(100, p * 100).toFixed(1)}%"></span></div><div class="meter-row" data-sens><span>${Math.round(p * 100)}% da sua média de gastos</span><span>Média dos últimos meses: ${money(info.avg3)}</span></div>`;
-  }
-  $("#p-hero").innerHTML = `<div class="hero">
-      <div class="hero-top"><span class="lbl">Gasto em ${mesNome(ym)}</span><button class="eye" type="button" data-eye aria-label="${priv ? "Mostrar valores" : "Esconder valores"}" title="${priv ? "Mostrar valores" : "Esconder valores"}">${priv ? EYE_OFF : EYE_ON}</button></div>
-      <div class="big" data-sens>${money(t.desp)}</div>
-      ${cmp ? `<div class="cmp">${cmp}</div>` : ""}
-      ${meter}
-      <div class="foot"><span class="muted">Saldo do mês <b class="${cls(t.saldo)}" data-sens>${signed(t.saldo)}</b></span><span data-sens><span class="pos">Entrou ${money(t.rec)}</span> · <span class="neg">Saiu ${money(t.desp)}</span></span></div>
-    </div>`;
 
+  /* folga: limites das categorias, ou a média dos últimos meses */
+  const orcM = D.cfg.orcamentos || {};
+  let ref = 0, usado = 0, refTxt = "";
+  if (info.budget > 0) { ref = info.budget; usado = txOfMonth(ym).filter(x => x.tipo !== "receita" && orcM[x.categoria] > 0).reduce((a, x) => a + x.valor, 0); refTxt = `dos limites de ${money(ref)}`; }
+  else if (info.avg3 > 0) { ref = info.avg3; usado = t.desp; refTxt = `da sua média de ${money(ref)}`; }
+  let folgaHTML;
+  if (ref > 0) {
+    const fr = 1 - usado / ref;
+    folgaHTML = `${gaugeSVG(fr, priv ? "••%" : Math.max(0, Math.round(fr * 100)) + "%")}<div class="txt"><span class="lbl">Folga no orçamento</span><span class="big2">${fr >= 0 ? `Ainda pode gastar <b>${money(ref - usado)}</b>` : `Passou <b class="neg">${money(usado - ref)}</b>`}</span><span class="s">Usou ${priv ? "••" : Math.round(usado / ref * 100)}% ${refTxt}</span>${cmp ? `<span class="s">${cmp}</span>` : ""}</div>`;
+  } else {
+    folgaHTML = `${gaugeSVG(0, "—")}<div class="txt"><span class="lbl">Folga no orçamento</span><span class="big2">Defina limites por categoria</span><span class="s">Toque aqui para definir quanto quer gastar por mês.</span></div>`;
+  }
+
+  /* gasto por dia */
+  const upTo = info.isCur ? info.day : daysIn(ym);
+  const dias = dailySpend(ym, upTo);
+  const mediaDia = upTo ? (info.isCur ? info.curSame : t.desp) / upTo : 0;
+  const nRec = txOfMonth(ym).filter(x => x.tipo === "receita").length;
+
+  /* investimentos */
   const pf = portfolio();
+  let invHTML;
   if (D.inv.length) {
     const nowYm = todayISO().slice(0, 7), vals = [];
     for (let i = 11; i >= 0; i--) { const m = ymAdd(nowYm, -i); vals.push(portfolio(i === 0 ? todayISO() : monthEnd(m)).atual); }
-    const firstIdx = vals.findIndex(v => v > 0);
-    $("#p-inv").innerHTML = `<button class="inv2" type="button" data-view-go="investimentos"><div class="top"><span>Investimentos</span><span class="pill ${cls(pf.resultado)}">${pctTxt(pf.pct)}</span></div><div class="v" data-sens>${money(pf.atual)}</div><div class="hint" data-sens>Aplicado ${money(pf.liquido)} · ${pf.resultado >= 0 ? "ganho" : "perda"} de ${money(Math.abs(pf.resultado))}</div>${sparkSVG(vals.slice(Math.max(0, firstIdx)), pf.resultado >= 0)}</button>`;
-  } else {
-    $("#p-inv").innerHTML = `<div class="inv2" style="cursor:default"><div class="top"><span>Investimentos</span></div><div class="hint">Cadastre seus investimentos para ver se está ganhando ou perdendo.</div><div style="margin-top:auto"><button class="btn sm" type="button" data-go="ativo">Cadastrar investimento</button></div></div>`;
-  }
+    const fi = vals.findIndex(v => v > 0);
+    invHTML = `<div class="v">${money(pf.atual)}</div><div class="s"><span class="${cls(pf.resultado)}">${pctTxt(pf.pct)}</span> no total</div>${sparkSVG(vals.slice(Math.max(0, fi)), pf.resultado >= 0)}`;
+  } else invHTML = `<div class="v">—</div><div class="s">Toque para cadastrar</div>`;
 
-  const upTo = info.isCur ? info.day : info.cum.length;
+  /* categorias */
+  const spent = {};
+  for (const x of txOfMonth(ym)) if (x.tipo !== "receita") spent[x.categoria] = (spent[x.categoria] || 0) + x.valor;
+  const cats = Object.entries(spent).sort((a, b) => b[1] - a[1]);
+  const catsHTML = cats.length
+    ? `<div class="stack">${cats.map(([c, v]) => `<span style="width:${(v / t.desp * 100).toFixed(2)}%;background:${catColor(c)}" title="${esc(c)}"></span>`).join("")}</div><div class="legend2">${cats.slice(0, 8).map(([c, v]) => `<button type="button" data-drill="cat" data-cat="${esc(c)}"><i style="background:${catColor(c)}"></i>${esc(c)} <small>${Math.round(v / t.desp * 100)}%</small></button>`).join("")}</div>`
+    : `<div class="s" style="margin-top:6px">Sem gastos neste mês.</div>`;
+
+  const ic = (path, color) => `<svg viewBox="0 0 24 24" style="stroke:${color}">${path}</svg>`;
+  $("#p-blocks").innerHTML = `
+    <button class="blk wide folga" type="button" data-drill="limites">${GO_ICON}${folgaHTML}</button>
+    <div class="blk wide" style="cursor:default"><span class="lbl">Gastos por categoria</span>${catsHTML}</div>
+    <button class="blk" type="button" data-drill="saidas">${GO_ICON}<span class="lbl">${ic('<path d="M7 7l10 10M17 9v8H9"/>', "var(--loss)")}Saídas</span><div class="v">${money(t.desp)}</div>${ref > 0 ? `<div class="meter ${usado / ref > 1 ? "over" : usado / ref >= .8 ? "warn" : ""}"><span style="width:${Math.min(100, usado / ref * 100).toFixed(1)}%"></span></div>` : `<div class="s">${txOfMonth(ym).filter(x => x.tipo !== "receita").length} despesas</div>`}</button>
+    <button class="blk" type="button" data-drill="entradas">${GO_ICON}<span class="lbl">${ic('<path d="M7 17L17 7M9 7h8v8"/>', "var(--gain)")}Entradas</span><div class="v">${money(t.rec)}</div><div class="s">${nRec} ${nRec === 1 ? "receita" : "receitas"} · saldo <span class="${cls(t.saldo)}">${signed(t.saldo)}</span></div></button>
+    <button class="blk" type="button" data-drill="dia">${GO_ICON}<span class="lbl">${ic('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/>', "var(--warn)")}Gasto por dia</span><div class="v">${money(mediaDia)}</div>${dias.length > 1 ? sparkSVG(dias, true).replace('style="stroke:var(--gain)"', 'style="stroke:var(--warn)"') : `<div class="s">média do mês</div>`}</button>
+    <button class="blk" type="button" data-drill="invest">${GO_ICON}<span class="lbl">${ic('<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>', "var(--accent-text)")}Investimentos</span>${invHTML}</button>`;
+
+  /* gasto dia a dia (acumulado) */
   $("#p-cum-key").innerHTML = `<span><i class="line" style="background:var(--accent-text)"></i>${mesNome(ym)}</span>${info.cumPrev.some(v => v > 0) ? `<span><i class="dash"></i>${mesNome(info.prev)}</span>` : ""}`;
   $("#p-cum").innerHTML = (t.desp > 0 || info.cumPrev.some(v => v > 0)) ? `<div style="overflow-x:auto">${cumSVG(info.cum, info.cumPrev, upTo)}</div>` : empty("Sem gastos neste mês", "O gráfico mostra como o gasto vai se acumulando ao longo do mês.");
 
-  const spent = {};
-  for (const x of txOfMonth(ym)) if (x.tipo !== "receita") spent[x.categoria] = (spent[x.categoria] || 0) + x.valor;
-  const orc = D.cfg.orcamentos || {};
-  const cats = Object.entries(spent).sort((a, b) => b[1] - a[1]);
-  const maxV = cats.length ? cats[0][1] : 1;
-  $("#p-cats").innerHTML = cats.length ? `<div class="catbars">${cats.slice(0, 7).map(([c, v]) => {
-    const lim = orc[c] > 0 ? orc[c] : 0, p = lim ? v / lim : 0, st = lim ? (p > 1 ? "over" : p >= 0.8 ? "warn" : "") : "";
-    const w = lim ? Math.min(100, p * 100) : v / maxV * 100;
-    return `<div class="catbar ${st}"><div class="top"><span>${esc(c)}</span><span class="num" data-sens>${money(v)} · ${Math.round(v / t.desp * 100)}%</span></div><div class="bar"><span style="width:${w.toFixed(1)}%"></span></div>${lim ? `<div class="lim" data-sens>${Math.round(p * 100)}% do limite de ${money(lim)}</div>` : ""}</div>`;
-  }).join("")}</div>` : empty("Sem gastos neste mês", "Os gastos por categoria aparecem aqui.");
-
   const recent = txOfMonth(ym).slice().sort((a, b) => a.data < b.data ? 1 : a.data > b.data ? -1 : (b.criadoEm || 0) - (a.criadoEm || 0)).slice(0, 6);
-  $("#p-recent").innerHTML = recent.length ? `<div class="tx-mini">${recent.map(x => `<button type="button" data-edit-tx="${x.id}" title="Editar"><span class="d">${fmtDate(x.data).slice(0, 5)}</span><span class="t">${esc(x.descricao)}<small>${esc(x.categoria)}</small></span><span class="val ${x.tipo === "receita" ? "pos" : ""}" data-sens>${x.tipo === "receita" ? "+" : "−"}${money(x.valor)}</span></button>`).join("")}</div>` : empty("Nenhum lançamento neste mês", "Toque em Gasto ou Receita para lançar.");
+  $("#p-recent").innerHTML = recent.length ? `<div class="tx-mini">${recent.map(x => `<button type="button" data-edit-tx="${x.id}" title="Editar"><span class="d">${fmtDate(x.data).slice(0, 5)}</span><span class="t">${esc(x.descricao)}<small>${esc(x.categoria)}</small></span><span class="val ${x.tipo === "receita" ? "pos" : ""}">${x.tipo === "receita" ? "+" : "−"}${money(x.valor)}</span></button>`).join("")}</div>` : empty("Nenhum lançamento neste mês", "Toque em Gasto ou Receita para lançar.");
 
   const months = []; for (let i = 5; i >= 0; i--) months.push(ymAdd(ym, -i));
   const data = months.map(monthTotals);
@@ -1701,6 +1760,7 @@ document.addEventListener("click", e => {
   const d = el.dataset;
   if (el.classList.contains("tab")) return go(d.view);
   if (d.viewGo) return go(d.viewGo);
+  if (d.drill) return drill(d.drill, d.cat);
   if (d.eye !== undefined) { setPrivado(!document.body.classList.contains("privado")); return render(); }
   if (d.quick) {
     UI.editing = null;
