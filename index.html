@@ -362,6 +362,13 @@ details.hist .row{grid-template-columns:78px minmax(0,1fr) auto auto;padding:8px
 .dica svg{width:18px;height:18px;flex:none;fill:none;stroke:var(--warn);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;margin-top:1px}
 .dica b{font-weight:600}
 .plan-warn{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 16px;font-size:13.5px}
+.lim-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px 14px}
+.lim-row{display:grid;grid-template-columns:minmax(0,1fr) 128px;gap:8px;align-items:center;font-size:13.5px}
+.lim-row .name{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lim-row input{padding:8px 8px 8px 34px;font-size:14px}
+.lim-total{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.lim-total .money-in{width:170px}
+.lim-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:13.5px}
 .form-plano{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media (max-width:560px){.form-plano{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:no-preference){ .view{animation:fade .18s ease-out} @keyframes fade{from{opacity:.4}to{opacity:1}} }
@@ -454,7 +461,8 @@ details.hist .row{grid-template-columns:78px minmax(0,1fr) auto auto;padding:8px
         </div>
         <div id="pl-sync"></div>
         <div class="blocks" id="pl-top"></div>
-        <div class="panel"><div class="panel-head"><h2>Mês × plano, por categoria</h2><button class="link" type="button" id="btn-cats-pl">Ajustar limites</button></div><div id="pl-cats"></div></div>
+        <div class="panel"><div class="panel-head"><h2>Mês × plano, por categoria</h2><button class="link" type="button" id="btn-ir-limites">Mudar limites</button></div><div id="pl-cats"></div></div>
+        <div class="panel" id="pl-lim-panel"><div class="panel-head"><h2>Limites do plano</h2><span class="muted" style="font-size:12.5px">valem para o site inteiro</span></div><div id="pl-lim"></div></div>
         <div class="grid-2">
           <div class="panel"><div class="panel-head"><h2>Reserva de emergência</h2><span class="muted" style="font-size:12.5px" id="pl-meta"></span></div><div id="pl-reserva"></div></div>
           <div class="panel"><div class="panel-head"><h2>Onde economizar</h2></div><div id="pl-dicas"></div></div>
@@ -1452,7 +1460,42 @@ function renderPlano(){
   let dicas = acima.map(x => `<div class="dica">${DICA_ICON}<span><b>${esc(x.c)}</b> passou ${money(x.d)} do limite em ${mesNome(ym)}.</span></div>`).join("");
   if (semLim.length) dicas += `<div class="dica">${DICA_ICON}<span>${semLim.map(esc).join(", ")} ${semLim.length === 1 ? "não tem" : "não têm"} limite definido.</span></div>`;
   if (gastoMes > P.gastos) dicas += `<div class="dica">${DICA_ICON}<span>Para fechar no plano, o mês precisaria de <b>${money(gastoMes - P.gastos)}</b> a menos.</span></div>`;
+  if (!document.activeElement || !document.activeElement.closest || !document.activeElement.closest("#pl-lim")) renderLimitesPlano();
   $("#pl-dicas").innerHTML = dicas || `<div class="empty"><b>Tudo dentro do plano</b><span>Nenhuma categoria passou do limite em ${mesNome(ym)}.</span></div>`;
+}
+function renderLimitesPlano(){
+  const P = plano(), orc = D.cfg.orcamentos || {};
+  /* começa pelos limites que valem hoje no site; categorias do plano sem limite no site entram com o valor do plano */
+  const cats = uniq([...D.cfg.catDespesa, ...Object.keys(P.limites)]);
+  const val = c => orc[c] > 0 ? orc[c] : (P.limites[c] || 0);
+  $("#pl-lim").innerHTML = `
+    <div class="lim-total"><label class="f" style="flex-direction:row;align-items:center;gap:10px;color:var(--ink);font-weight:500">Gastar no máximo por mês<div class="money-in"><span>R$</span><input type="text" inputmode="decimal" id="lim-total" value="${fmtInput(P.gastos)}"></div></label></div>
+    <div class="lim-grid">${cats.map(c => `<label class="lim-row"><span class="name"><i class="dot" style="background:${catColor(c)}"></i>${esc(c)}</span><div class="money-in"><span style="font-size:13px">R$</span><input type="text" inputmode="decimal" data-lim-pl="${esc(c)}" value="${val(c) ? fmtInput(val(c)) : ""}" placeholder="Sem limite"></div></label>`).join("")}</div>
+    <div class="lim-foot"><span id="lim-soma"></span><div class="btns"><button class="btn ghost sm" type="button" id="lim-reset">Desfazer</button><button class="btn sm" type="button" id="lim-save">Salvar limites</button></div></div>`;
+  const box = $("#pl-lim");
+  const soma = () => [...box.querySelectorAll("[data-lim-pl]")].reduce((a, i) => a + (parseValor(i.value) > 0 ? parseValor(i.value) : 0), 0);
+  const upd = () => {
+    const tot = parseValor($("#lim-total").value) || 0, sm = soma(), dif = round2(tot - sm);
+    $("#lim-soma").innerHTML = `Soma das categorias: <b>${money(sm)}</b> de ${money(tot)}${Math.abs(dif) < 0.5 ? ` · <span class="pos">fechado</span>` : dif > 0 ? ` · sobram ${money(dif)} sem categoria` : ` · <span class="neg">passou ${money(-dif)}</span>`}`;
+  };
+  box.querySelectorAll("input").forEach(i => i.addEventListener("input", upd)); upd();
+  $("#lim-reset").onclick = () => renderLimitesPlano();
+  $("#lim-save").onclick = () => {
+    const tot = round2(parseValor($("#lim-total").value) || 0);
+    if (!(tot > 0)) { toast("Informe quanto quer gastar no máximo por mês."); $("#lim-total").focus(); return; }
+    const novo = {}; box.querySelectorAll("[data-lim-pl]").forEach(i => { const v = parseValor(i.value); if (v > 0) novo[i.dataset.limPl] = round2(v); });
+    const sm = Object.values(novo).reduce((a, v) => a + v, 0);
+    const salvar = () => {
+      const cat = D.cfg.catDespesa.slice(); for (const c of Object.keys(novo)) if (!cat.includes(c)) cat.push(c);
+      const P2 = Object.assign({}, plano(), { gastos: tot, limites: novo });
+      if (P2.gastos + P2.reserva > P2.salario) P2.reserva = round2(Math.max(0, P2.salario - P2.gastos));
+      P2.objetivos = round2(Math.max(0, P2.salario - P2.gastos - P2.reserva));
+      D.cfg = Object.assign({}, D.cfg, { catDespesa: cat, orcamentos: novo, plano: P2, alteradoEm: Date.now() });
+      save(); toast("Limites salvos para o site inteiro"); render();
+    };
+    if (sm > tot + 0.5) confirmBox("A soma passou do limite do mês", `As categorias somam ${money(sm)}, mas o limite do mês é ${money(tot)}. Salvar mesmo assim?`, "Salvar assim mesmo", salvar);
+    else salvar();
+  };
 }
 function aplicarLimitesPlano(){
   const P = plano();
@@ -1963,6 +2006,7 @@ document.addEventListener("click", e => {
   if (d.openCats !== undefined) return openCats();
   if (el.id === "btn-cats" || el.id === "btn-cats-p" || el.id === "btn-cats-pl") return openCats();
   if (el.id === "btn-plano-edit") return openPlano();
+  if (el.id === "btn-ir-limites") { const p = $("#pl-lim-panel"); p.scrollIntoView({ behavior: "smooth", block: "start" }); p.classList.remove("flash"); void p.offsetWidth; p.classList.add("flash"); setTimeout(() => { const i = $("#lim-total"); if (i) i.focus({ preventScroll: true }); }, 400); return; }
   if (el.id === "btn-plano-aplicar") return aplicarLimitesPlano();
   if (el.id === "btn-new-asset") { UI.editing = null; return openForm("ativo"); }
   if (el.id === "btn-backup" || el.id === "banner-backup") return backup();
