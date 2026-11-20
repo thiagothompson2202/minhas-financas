@@ -766,8 +766,8 @@ const empty = (title, text, btn) => `<div class="empty"><b>${title}</b><span>${t
 const goBtn = (form, label) => `<button class="btn sm" type="button" data-go="${form}">${label}</button>`;
 function txRow(t, actions = true){
   const isRec = t.tipo === "receita";
-  return `<div class="row"><div class="d">${fmtDate(t.data)}</div>
-    <div class="t"><b>${esc(t.descricao)}</b><div class="meta"><span class="chip"><i style="background:${catColor(t.categoria)}"></i>${esc(t.categoria)}</span>${t.pagamento ? `<span>· ${esc(t.pagamento)}</span>` : ""}${t.parcelas ? `<span>· parcela ${t.parcela}/${t.parcelas} de ${money(t.valorTotal)}</span>` : ""}${t.dataCompra && t.dataCompra !== t.data ? `<span>· compra em ${fmtDate(t.dataCompra)}</span>` : ""}${t.obs ? `<span>· ${esc(t.obs)}</span>` : ""}</div></div>
+  return `<div class="row"><div class="d">${fmtDate(t.dataCompra || t.data)}</div>
+    <div class="t"><b>${esc(t.descricao)}</b><div class="meta"><span class="chip"><i style="background:${catColor(t.categoria)}"></i>${esc(t.categoria)}</span>${t.pagamento ? `<span>· ${esc(t.pagamento)}</span>` : ""}${t.parcelas ? `<span>· parcela ${t.parcela}/${t.parcelas} de ${money(t.valorTotal)}</span>` : ""}${t.dataCompra && t.dataCompra.slice(0, 7) !== t.data.slice(0, 7) ? `<span>· conta na fatura de ${MESL[+t.data.slice(5, 7) - 1]}</span>` : ""}${t.obs ? `<span>· ${esc(t.obs)}</span>` : ""}</div></div>
     <div class="val ${isRec ? "pos" : ""}">${isRec ? "+" : "−"} ${money(t.valor)}</div>
     ${actions ? `<div class="acts"><button class="icon-btn" type="button" title="Editar" aria-label="Editar" data-edit-tx="${t.id}">${ICON.edit}</button><button class="icon-btn danger" type="button" title="Excluir" aria-label="Excluir" data-del-tx="${t.id}">${ICON.del}</button></div>` : "<div></div>"}</div>`;
 }
@@ -1003,7 +1003,7 @@ function renderGastos(){
   fillSelect($("#fl-pag"), [["","Todas"], ...PAGAMENTOS.map(p => [p,p])]);
   const ft = $("#fl-tipo").value, fc = $("#fl-cat").value, fp = $("#fl-pag").value, fq = norm($("#fl-q").value.trim());
   const list = txOfMonth(UI.month).filter(x => (!ft || x.tipo === ft) && (!fc || x.categoria === fc) && (!fp || x.pagamento === fp) && (!fq || norm(x.descricao + " " + (x.obs||"")).includes(fq)))
-    .sort((a,b) => a.data < b.data ? 1 : a.data > b.data ? -1 : (b.criadoEm||0) - (a.criadoEm||0));
+    .sort((a,b) => { const qa = a.dataCompra || a.data, qb = b.dataCompra || b.data; return qa < qb ? 1 : qa > qb ? -1 : (b.criadoEm||0) - (a.criadoEm||0); });
   const filtered = ft || fc || fp || fq;
   const sumR = list.filter(x => x.tipo === "receita").reduce((a,b) => a + b.valor, 0), sumD = list.filter(x => x.tipo !== "receita").reduce((a,b) => a + b.valor, 0);
   $("#g-count").innerHTML = list.length ? `${list.length} ${list.length === 1 ? "lançamento" : "lançamentos"}${filtered ? ` · filtrado: <span class="num pos">+${money(sumR)}</span> <span class="num neg">−${money(sumD)}</span>` : ""}` : "";
