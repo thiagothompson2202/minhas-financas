@@ -966,8 +966,14 @@ function renderPainel(){
   $("#p-cum-key").innerHTML = `<span><i class="line" style="background:var(--accent-text)"></i>${mesNome(ym)}</span>${info.cumPrev.some(v => v > 0) ? `<span><i class="dash"></i>${mesNome(info.prev)}</span>` : ""}`;
   $("#p-cum").innerHTML = (t.desp > 0 || info.cumPrev.some(v => v > 0)) ? `<div style="overflow-x:auto">${cumSVG(info.cum, info.cumPrev, upTo)}</div>` : empty("Sem gastos neste mês", "O gráfico mostra como o gasto vai se acumulando ao longo do mês.");
 
-  const recent = txOfMonth(ym).slice().sort((a, b) => a.data < b.data ? 1 : a.data > b.data ? -1 : (b.criadoEm || 0) - (a.criadoEm || 0)).slice(0, 6);
-  $("#p-recent").innerHTML = recent.length ? `<div class="tx-mini">${recent.map(x => `<button type="button" data-edit-tx="${x.id}" title="Editar"><span class="d">${fmtDate(x.data).slice(0, 5)}</span><span class="t">${esc(x.descricao)}<small>${esc(x.categoria)}</small></span><span class="val ${x.tipo === "receita" ? "pos" : ""}">${x.tipo === "receita" ? "+" : "−"}${money(x.valor)}</span></button>`).join("")}</div>` : empty("Nenhum lançamento neste mês", "Toque em Gasto ou Receita para lançar.");
+  /* últimos lançamentos: pela data em que a compra aconteceu (não pela fatura), sem nada no futuro */
+  const quando = x => x.dataCompra || x.data;
+  const hojeISO = todayISO();
+  const recent = D.tx.filter(x => quando(x) <= hojeISO).sort((a, b) => quando(a) < quando(b) ? 1 : quando(a) > quando(b) ? -1 : (b.criadoEm || 0) - (a.criadoEm || 0)).slice(0, 6);
+  $("#p-recent").innerHTML = recent.length ? `<div class="tx-mini">${recent.map(x => {
+    const fat = x.dataCompra && x.data.slice(0, 7) !== x.dataCompra.slice(0, 7) ? ` · fatura de ${MES[+x.data.slice(5, 7) - 1]}` : "";
+    return `<button type="button" data-edit-tx="${x.id}" title="Editar"><span class="d">${fmtDate(quando(x)).slice(0, 5)}</span><span class="t">${esc(x.descricao)}<small>${esc(x.categoria)}${x.parcelas ? ` · ${x.parcela}/${x.parcelas}` : ""}${fat}</small></span><span class="val ${x.tipo === "receita" ? "pos" : ""}">${x.tipo === "receita" ? "+" : "−"}${money(x.valor)}</span></button>`;
+  }).join("")}</div>` : empty("Nenhum lançamento ainda", "Toque em Gasto ou Receita para lançar.");
 
   const months = []; for (let i = 5; i >= 0; i--) months.push(ymAdd(ym, -i));
   const data = months.map(monthTotals);
