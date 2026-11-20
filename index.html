@@ -338,6 +338,32 @@ details.hist .row{grid-template-columns:78px minmax(0,1fr) auto auto;padding:8px
 .flash{animation:flash 1.2s ease-out}
 @keyframes flash{0%{box-shadow:0 0 0 2px var(--accent)}100%{box-shadow:0 0 0 0 transparent}}
 @media (max-width:820px){.blocks{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.blk{padding:14px}.blk .v{font-size:19px}.folga svg.gauge{width:96px}}
+/* aba plano */
+.rule{display:inline-flex;align-items:center;background:var(--surface-2);border-radius:999px;padding:7px 12px;font-size:13px}
+.split-donut{width:120px;flex:none}
+.split-leg{display:flex;flex-direction:column;gap:8px;flex:1;min-width:0;font-size:13.5px}
+.split-leg div{display:flex;justify-content:space-between;gap:8px}
+.split-leg i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+.kv .l{font-size:12px;color:var(--muted)}
+.kv .n{font:600 19px/1.2 var(--f-display);font-variant-numeric:tabular-nums}
+.vs{display:flex;flex-direction:column;gap:12px}
+.vs button{display:grid;grid-template-columns:100px minmax(0,1fr) 150px;gap:10px;align-items:center;border:0;background:none;color:inherit;text-align:left;padding:4px 6px;margin:0 -6px;border-radius:10px;cursor:pointer;font-size:13.5px}
+.vs button:hover{background:var(--surface-2)}
+.vs .track{position:relative;height:10px;background:var(--surface-2);border-radius:999px}
+.vs .fill{height:100%;border-radius:999px;background:var(--gain)}
+.vs .fill.over{background:var(--loss)} .vs .fill.warn{background:var(--warn)}
+.vs .mark{position:absolute;top:-3px;width:2px;height:16px;background:var(--accent-text);border-radius:1px}
+.vs .r{color:var(--muted);text-align:right;font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.vs .r b{color:var(--ink);font-weight:600}
+.vs-total{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:1px solid var(--line);margin-top:12px;padding-top:10px;font-size:13.5px}
+@media (max-width:560px){.vs button{grid-template-columns:minmax(0,1fr) auto;row-gap:6px}.vs .track{grid-column:1/-1;order:3}}
+.dica{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;padding:6px 0}
+.dica svg{width:18px;height:18px;flex:none;fill:none;stroke:var(--warn);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;margin-top:1px}
+.dica b{font-weight:600}
+.plan-warn{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 16px;font-size:13.5px}
+.form-plano{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:560px){.form-plano{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:no-preference){ .view{animation:fade .18s ease-out} @keyframes fade{from{opacity:.4}to{opacity:1}} }
 </style>
 </head>
@@ -348,6 +374,7 @@ details.hist .row{grid-template-columns:78px minmax(0,1fr) auto auto;padding:8px
     <button class="tab" data-view="painel"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Painel</button>
     <button class="tab" data-view="gastos"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Gastos</button>
     <button class="tab" data-view="investimentos"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Investimentos</button>
+    <button class="tab" data-view="plano"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>Plano</button>
     <button class="tab" data-view="lancar"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Lançar</button>
     <div class="nav-foot">
       <button class="sync" type="button" data-sync-chip data-s="off"><i></i><span>Só neste aparelho</span></button><br>
@@ -417,6 +444,28 @@ details.hist .row{grid-template-columns:78px minmax(0,1fr) auto auto;padding:8px
           <div class="panel"><div class="panel-head"><h2>Resultado por ativo</h2></div><div id="i-rank"></div></div>
         </div>
         <div id="i-list"></div>
+      </section>
+
+      <!-- PLANO -->
+      <section class="view" id="v-plano" hidden>
+        <div class="head">
+          <div><div class="eyebrow" id="pl-sub">Planejamento financeiro</div><h1>Meu plano</h1></div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn ghost sm" type="button" id="btn-plano-edit">Editar plano</button><div class="month" data-month><button type="button" data-mstep="-1" aria-label="Mês anterior">‹</button><span data-mlabel></span><button type="button" data-mstep="1" aria-label="Próximo mês">›</button></div></div>
+        </div>
+        <div id="pl-sync"></div>
+        <div class="blocks" id="pl-top"></div>
+        <div class="panel"><div class="panel-head"><h2>Mês × plano, por categoria</h2><button class="link" type="button" id="btn-cats-pl">Ajustar limites</button></div><div id="pl-cats"></div></div>
+        <div class="grid-2">
+          <div class="panel"><div class="panel-head"><h2>Reserva de emergência</h2><span class="muted" style="font-size:12.5px" id="pl-meta"></span></div><div id="pl-reserva"></div></div>
+          <div class="panel"><div class="panel-head"><h2>Onde economizar</h2></div><div id="pl-dicas"></div></div>
+        </div>
+        <div class="panel"><div class="panel-head"><h2>Regras do mês</h2></div><div class="legend2" style="margin-top:0">
+          <span class="rule">1. Separar a reserva e os objetivos no dia do salário</span>
+          <span class="rule">2. Pix entre contas suas não é gasto</span>
+          <span class="rule" id="pl-regra-fatura">3. Fatura vira no dia 21</span>
+          <span class="rule">4. Sem parcelar até a reserva ficar pronta</span>
+          <span class="rule">5. Revisão toda semana</span>
+        </div></div>
       </section>
 
       <!-- LANÇAR -->
@@ -1118,6 +1167,7 @@ function render(){
   if (UI.view === "painel") renderPainel();
   else if (UI.view === "gastos") renderGastos();
   else if (UI.view === "investimentos") renderInvest();
+  else if (UI.view === "plano") renderPlano();
   else renderLancar();
   renderBanner();
 }
@@ -1323,10 +1373,126 @@ function openCats(){
       readLims();
       if (!draft.catDespesa.length) draft.catDespesa = ["Outros"];
       if (!draft.catReceita.length) draft.catReceita = ["Outros"];
-      draft.alteradoEm = Date.now(); D.cfg = draft; save(); closeModal(); toast("Categorias e limites salvos"); render();
+      draft.alteradoEm = Date.now(); D.cfg = Object.assign({}, D.cfg, draft); save(); closeModal(); toast("Categorias e limites salvos"); render();
     };
   };
   draw();
+}
+
+/* ================= plano financeiro ================= */
+const PLANO_PADRAO = { salario: 2500, gastos: 1000, reserva: 1000, objetivos: 500, reservaAtual: 0, metaMeses: 6,
+  limites: { "Alimentação": 480, "Transporte": 110, "Lazer": 150, "Compras": 100, "Assinaturas": 40, "Saúde": 50, "Outros": 70 } };
+const plano = () => Object.assign({}, PLANO_PADRAO, D.cfg.plano || {});
+const DICA_ICON = '<svg viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>';
+function semanaAtual(){
+  const d = new Date(), dow = (d.getDay() + 6) % 7; d.setDate(d.getDate() - dow);
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+function renderPlano(){
+  const P = plano(), ym = UI.month, t = monthTotals(ym), hoje = todayISO(), isCur = ym === hoje.slice(0, 7);
+  const dim = daysIn(ym), porDia = P.gastos / dim, porSemana = P.gastos * 7 / dim;
+  const guardar = P.reserva + P.objetivos;
+  $("#pl-sub").textContent = `Salário de ${money(P.salario)} · gastar até ${money(P.gastos)}`;
+  $("#pl-regra-fatura").textContent = `3. Fatura vira no dia ${diaVirada()}`;
+
+  /* limites do site x limites do plano */
+  const orc = D.cfg.orcamentos || {};
+  const somaSite = D.cfg.catDespesa.reduce((a, c) => a + (orc[c] > 0 ? orc[c] : 0), 0);
+  const somaPlano = Object.values(P.limites).reduce((a, v) => a + v, 0);
+  const iguais = Object.keys(P.limites).every(c => Math.abs((orc[c] || 0) - P.limites[c]) < 0.01);
+  $("#pl-sync").innerHTML = iguais ? "" : `<div class="plan-warn"><span>Os limites do site somam <b>${money(somaSite)}</b>, mas o plano prevê <b>${money(somaPlano)}</b>. Os limites valem para o site inteiro (Painel, Gastos e Plano).</span><button class="btn sm" type="button" id="btn-plano-aplicar">Usar os limites do plano</button></div>`;
+
+  /* topo: divisão do salário + números do mês */
+  const fr = [P.gastos, P.reserva, P.objetivos].map(v => P.salario > 0 ? v / P.salario : 0);
+  const r = 46, C = 2 * Math.PI * r; let off = 0;
+  const cols = ["var(--c1)", "var(--gain)", "var(--c2)"];
+  const segs = fr.map((f, i) => { const len = f * C; const s = `<circle cx="60" cy="60" r="${r}" fill="none" style="stroke:${cols[i]}" stroke-width="16" stroke-dasharray="${Math.max(0, len - 2)} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 60 60)"/>`; off += len; return s; }).join("");
+  const gastoMes = t.desp;
+  const restante = P.gastos - gastoMes;
+  const diasRest = isCur ? dim - +hoje.slice(8, 10) + 1 : 0;
+  const podeHoje = isCur ? Math.max(0, restante) / Math.max(1, diasRest) : null;
+  const q = x => x.dataCompra || x.data, seg = semanaAtual();
+  const gastoSemana = D.tx.filter(x => x.tipo !== "receita" && q(x) >= seg && q(x) <= hoje).reduce((a, x) => a + x.valor, 0);
+  const pMes = P.gastos ? gastoMes / P.gastos : 0, stMes = pMes > 1 ? "over" : pMes >= .8 ? "warn" : "";
+  $("#pl-top").innerHTML = `
+    <div class="blk wide" style="cursor:default;flex-direction:row;align-items:center;gap:16px"><svg class="split-donut" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="${r}" fill="none" style="stroke:var(--surface-2)" stroke-width="16"/>${segs}<text x="60" y="56" text-anchor="middle" style="fill:var(--muted);font-size:10px">salário</text><text x="60" y="73" text-anchor="middle" style="fill:var(--ink);font-size:14px;font-weight:600">${money(P.salario).replace(",00", "")}</text></svg>
+      <div class="split-leg"><div><span><i style="background:var(--c1)"></i>Gastos do mês</span><b>${money(P.gastos)}</b></div><div><span><i style="background:var(--gain)"></i>Reserva</span><b>${money(P.reserva)}</b></div><div><span><i style="background:var(--c2)"></i>Objetivos</span><b>${money(P.objetivos)}</b></div><span class="s" style="font-size:12px;color:var(--muted)">Separe ${money(guardar)} assim que o salário cair.</span></div></div>
+    <button class="blk" type="button" data-drill="saidas">${GO_ICON}<span class="lbl">Gasto em ${mesNome(ym)}</span><div class="v">${money(gastoMes)}</div><div class="s">de ${money(P.gastos)} · ${restante >= 0 ? `sobram ${money(restante)}` : `passou ${money(-restante)}`}</div><div class="meter ${stMes}"><span style="width:${Math.min(100, pMes * 100).toFixed(1)}%"></span></div></button>
+    <div class="blk" style="cursor:default"><span class="lbl">${isCur ? "Pode gastar hoje" : "Limite por dia"}</span><div class="v">${money(isCur ? podeHoje : porDia)}</div><div class="s">${isCur ? `Semana: ${money(gastoSemana)} de ${money(porSemana)}` : `${money(porSemana)} por semana`}</div>${isCur ? `<div class="meter ${gastoSemana > porSemana ? "over" : gastoSemana >= porSemana * .8 ? "warn" : ""}"><span style="width:${Math.min(100, gastoSemana / porSemana * 100).toFixed(1)}%"></span></div>` : ""}</div>`;
+
+  /* mês x plano por categoria (usa os limites do site) */
+  const spent = {};
+  for (const x of txOfMonth(ym)) if (x.tipo !== "receita") spent[x.categoria] = (spent[x.categoria] || 0) + x.valor;
+  const cats = uniq([...D.cfg.catDespesa, ...Object.keys(spent)]).filter(c => (orc[c] > 0) || spent[c] > 0)
+    .sort((a, b) => ((spent[b] || 0) - (orc[b] || 0)) - ((spent[a] || 0) - (orc[a] || 0)));
+  const maxV = Math.max(1, ...cats.map(c => Math.max(spent[c] || 0, orc[c] || 0)));
+  $("#pl-cats").innerHTML = cats.length ? `<div class="vs">${cats.map(c => {
+    const s = spent[c] || 0, l = orc[c] || 0, p = l ? s / l : (s ? 2 : 0), st = !l ? "over" : p > 1 ? "over" : p >= .8 ? "warn" : "";
+    return `<button type="button" data-drill="cat" data-cat="${esc(c)}"><span>${esc(c)}</span><div class="track"><div class="fill ${st}" style="width:${(s / maxV * 100).toFixed(1)}%"></div>${l ? `<div class="mark" style="left:calc(${(l / maxV * 100).toFixed(1)}% - 1px)"></div>` : ""}</div><span class="r">${money(s)} → <b>${l ? money(l) : "sem limite"}</b></span></button>`;
+  }).join("")}</div><div class="vs-total"><span class="muted">Total de ${mesNome(ym)}</span><span>Gasto <b class="${gastoMes > P.gastos ? "neg" : "pos"}">${money(gastoMes)}</b> · plano <b style="color:var(--accent-text)">${money(P.gastos)}</b></span></div><p class="hint" style="margin:8px 0 0">A barra é o que você gastou; o risco azul é o limite. Toque numa categoria para ver os lançamentos.</p>`
+    : empty("Nada gasto neste mês", "Os gastos por categoria aparecem aqui, comparados com os limites.");
+
+  /* reserva */
+  const meta = P.gastos * P.metaMeses, atual = Math.max(0, P.reservaAtual);
+  const faltam = Math.max(0, meta - atual), meses = P.reserva > 0 ? Math.ceil(faltam / P.reserva) : 0;
+  $("#pl-meta").textContent = `meta ${money(meta)} (${P.metaMeses} meses de gastos)`;
+  if (faltam <= 0) $("#pl-reserva").innerHTML = `<div class="empty"><b>Reserva completa</b><span>Agora os ${money(P.reserva)} do mês podem ir para os objetivos.</span></div>`;
+  else {
+    const n = Math.min(Math.max(meses, 1), 12), W = 320, H = 130, bw = Math.min(34, (W - 20) / n - 10), step = (W - 20) / n;
+    const startYm = ymAdd(hoje.slice(0, 7), 1);
+    let g = `<line x1="0" y1="104" x2="${W}" y2="104" style="stroke:var(--line)"/><line x1="0" y1="18" x2="${W}" y2="18" style="stroke:var(--gain)" stroke-dasharray="4 4" opacity=".6"/><text x="${W - 2}" y="12" text-anchor="end" style="fill:var(--gain);font-size:10px">${compact(meta)}</text>`;
+    for (let i = 0; i < n; i++) { const v = Math.min(meta, atual + P.reserva * (i + 1)), h = v / meta * 86, x = 10 + step * i + (step - bw) / 2; g += `<rect x="${x.toFixed(1)}" y="${(104 - h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="4" style="fill:var(--gain);opacity:${(.45 + .55 * (i + 1) / n).toFixed(2)}"/><text x="${(x + bw / 2).toFixed(1)}" y="120" text-anchor="middle" style="fill:var(--muted);font-size:10px">${MES[+ymAdd(startYm, i).slice(5, 7) - 1]}</text>`; }
+    const fim = ymAdd(hoje.slice(0, 7), meses);
+    $("#pl-reserva").innerHTML = `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:13.5px;margin-bottom:6px"><span>Hoje: <b>${money(atual)}</b></span><span class="muted">Faltam ${money(faltam)}</span></div><div class="meter"><span style="width:${(atual / meta * 100).toFixed(1)}%;background:var(--gain)"></span></div><svg class="chart" viewBox="0 0 ${W} ${H}" style="margin-top:10px" aria-hidden="true">${g}</svg><p class="hint" style="margin:6px 0 0">${meses ? `Completa em ${ymLabel(fim)} guardando ${money(P.reserva)} por mês.` : "Defina quanto guardar por mês em Editar plano."}</p>`;
+  }
+
+  /* onde economizar: categorias acima do limite */
+  const acima = cats.map(c => ({ c, d: (spent[c] || 0) - (orc[c] || 0) })).filter(x => x.d > 0.5 && orc[x.c] > 0).sort((a, b) => b.d - a.d).slice(0, 4);
+  const semLim = cats.filter(c => !(orc[c] > 0) && spent[c] > 0);
+  let dicas = acima.map(x => `<div class="dica">${DICA_ICON}<span><b>${esc(x.c)}</b> passou ${money(x.d)} do limite em ${mesNome(ym)}.</span></div>`).join("");
+  if (semLim.length) dicas += `<div class="dica">${DICA_ICON}<span>${semLim.map(esc).join(", ")} ${semLim.length === 1 ? "não tem" : "não têm"} limite definido.</span></div>`;
+  if (gastoMes > P.gastos) dicas += `<div class="dica">${DICA_ICON}<span>Para fechar no plano, o mês precisaria de <b>${money(gastoMes - P.gastos)}</b> a menos.</span></div>`;
+  $("#pl-dicas").innerHTML = dicas || `<div class="empty"><b>Tudo dentro do plano</b><span>Nenhuma categoria passou do limite em ${mesNome(ym)}.</span></div>`;
+}
+function aplicarLimitesPlano(){
+  const P = plano();
+  confirmBox("Usar os limites do plano?", `Os limites por categoria do site inteiro passam a ser os do plano (total de ${money(Object.values(P.limites).reduce((a, v) => a + v, 0))}). Você pode mudar depois em Categorias e limites.`, "Usar limites do plano", () => {
+    const orc = {}; for (const [c, v] of Object.entries(P.limites)) { orc[c] = v; if (!D.cfg.catDespesa.includes(c)) D.cfg.catDespesa.push(c); }
+    D.cfg = Object.assign({}, D.cfg, { orcamentos: orc, alteradoEm: Date.now() }); save(); toast("Limites do plano aplicados"); render();
+  });
+}
+function openPlano(){
+  const P = plano();
+  openModal(`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2>Editar plano</h2><button class="icon-btn" type="button" data-close aria-label="Fechar">${ICON.x}</button></div>
+    <div class="form-plano">
+      <label class="f">Salário por mês<div class="money-in"><span>R$</span><input type="text" inputmode="decimal" id="pl-salario" value="${fmtInput(P.salario)}"></div></label>
+      <label class="f">Gastar no máximo<div class="money-in"><span>R$</span><input type="text" inputmode="decimal" id="pl-gastos" value="${fmtInput(P.gastos)}"></div></label>
+      <label class="f">Guardar para a reserva<div class="money-in"><span>R$</span><input type="text" inputmode="decimal" id="pl-reserva-in" value="${fmtInput(P.reserva)}"></div></label>
+      <label class="f">Objetivos e investimentos<div class="money-in"><span>R$</span><input type="text" inputmode="decimal" id="pl-obj" value="${fmtInput(P.objetivos)}" readonly style="opacity:.75"></div><span class="hint">Calculado: o que sobra do salário.</span></label>
+      <label class="f">Quanto já tem de reserva<div class="money-in"><span>R$</span><input type="text" inputmode="decimal" id="pl-atual" value="${fmtInput(P.reservaAtual)}"></div></label>
+      <label class="f">Meta da reserva (meses de gastos)<input type="number" id="pl-meses" min="1" max="24" value="${P.metaMeses}"></label>
+    </div>
+    <div class="eyebrow">Limites por categoria do plano</div>
+    <div style="display:flex;flex-direction:column;gap:8px">${Object.entries(P.limites).map(([c, v], i) => `<div class="cat-edit" style="grid-template-columns:minmax(0,1fr) 150px"><span class="name"><i class="dot" style="background:${catColor(c)}"></i>${esc(c)}</span><div class="money-in"><span style="font-size:13px">R$</span><input type="text" inputmode="decimal" data-pl-lim="${esc(c)}" value="${fmtInput(v)}" style="font-size:14px;padding:8px 8px 8px 36px"></div></div>`).join("")}</div>
+    <p class="hint" id="pl-soma" style="margin:0"></p>
+    <div class="btns" style="justify-content:flex-end"><button class="btn ghost" type="button" data-close>Cancelar</button><button class="btn" type="button" id="pl-save">Salvar plano</button></div>`);
+  const box = $("#modal-box");
+  const num = id => { const v = parseValor($(id).value); return isNaN(v) ? 0 : round2(v); };
+  const upd = () => {
+    const obj = round2(num("#pl-salario") - num("#pl-gastos") - num("#pl-reserva-in"));
+    $("#pl-obj").value = fmtInput(Math.max(0, obj));
+    const soma = [...box.querySelectorAll("[data-pl-lim]")].reduce((a, i) => a + (parseValor(i.value) || 0), 0);
+    $("#pl-soma").innerHTML = `Soma dos limites: <b>${money(soma)}</b> de ${money(num("#pl-gastos"))}${Math.abs(soma - num("#pl-gastos")) > 0.5 ? " · ajuste para bater com o valor de gastos" : ""}${obj < 0 ? ` · <span class="neg">gastos + reserva passam do salário</span>` : ""}`;
+  };
+  box.querySelectorAll("input").forEach(i => i.addEventListener("input", upd)); upd();
+  $("#pl-save").onclick = () => {
+    const sal = num("#pl-salario"), gas = num("#pl-gastos"), res = num("#pl-reserva-in");
+    if (!(sal > 0) || !(gas > 0)) { toast("Informe o salário e o valor de gastos."); return; }
+    if (gas + res > sal + 0.005) { toast("Gastos + reserva não podem passar do salário."); return; }
+    const lim = {}; box.querySelectorAll("[data-pl-lim]").forEach(i => { const v = parseValor(i.value); if (v > 0) lim[i.dataset.plLim] = round2(v); });
+    const novo = { salario: sal, gastos: gas, reserva: res, objetivos: round2(sal - gas - res), reservaAtual: num("#pl-atual"), metaMeses: Math.min(24, Math.max(1, parseInt($("#pl-meses").value, 10) || 6)), limites: lim };
+    D.cfg = Object.assign({}, D.cfg, { plano: novo, alteradoEm: Date.now() }); save(); closeModal(); toast("Plano salvo"); render();
+  };
 }
 
 /* backup, importação e exportação */
@@ -1795,7 +1961,9 @@ document.addEventListener("click", e => {
   if (d.flow) { UI.editing = null; UI.form = "flow"; go("lancar"); render(); $("#flow-ativo").value = d.flow; $("#flow-valor").focus(); return; }
   if (d.close !== undefined) return closeModal();
   if (d.openCats !== undefined) return openCats();
-  if (el.id === "btn-cats" || el.id === "btn-cats-p") return openCats();
+  if (el.id === "btn-cats" || el.id === "btn-cats-p" || el.id === "btn-cats-pl") return openCats();
+  if (el.id === "btn-plano-edit") return openPlano();
+  if (el.id === "btn-plano-aplicar") return aplicarLimitesPlano();
   if (el.id === "btn-new-asset") { UI.editing = null; return openForm("ativo"); }
   if (el.id === "btn-backup" || el.id === "banner-backup") return backup();
   if (el.id === "btn-exp-tx") return exportTx();
@@ -1820,7 +1988,7 @@ let qT; $("#fl-q").addEventListener("input", () => { clearTimeout(qT); qT = setT
 $("#file-restore").addEventListener("change", e => { const f = e.target.files[0]; if (f) restore(f); e.target.value = ""; });
 $("#file-csv").addEventListener("change", e => { const f = e.target.files[0]; if (!f) return; if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") return importPdfFile(f); const r = new FileReader(); r.onload = () => { let txt = r.result; if (txt.includes("�")) { const r2 = new FileReader(); r2.onload = () => showImport(parseCSV(r2.result)); r2.readAsText(f, "windows-1252"); return; } showImport(parseCSV(txt)); }; r.readAsText(f, "utf-8"); });
 window.addEventListener("storage", e => { if (e.key === STORE_KEY) { load(); render(); } });
-function route(){ const h = location.hash.replace("#", ""); UI.view = ["painel","gastos","investimentos","lancar"].includes(h) ? h : "painel"; render(); }
+function route(){ const h = location.hash.replace("#", ""); UI.view = ["painel","gastos","investimentos","plano","lancar"].includes(h) ? h : "painel"; render(); }
 window.addEventListener("hashchange", route);
 let rzT, rzW = innerWidth < 560; window.addEventListener("resize", () => { clearTimeout(rzT); rzT = setTimeout(() => { const nw = innerWidth < 560; if (nw !== rzW) { rzW = nw; render(); } }, 200); });
 
